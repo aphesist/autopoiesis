@@ -33,10 +33,12 @@ def goodhart_index(proxy_best: Sequence[float], proxy_seed: Sequence[float],
     return (np.mean(proxy_best) - np.mean(proxy_seed)) - (np.mean(clean_best) - np.mean(clean_seed))
 
 
-def sign_flip_test(values: Sequence[float]) -> float:
-    """Exact two-sided sign-flip (one-sample permutation) test of mean == 0.
+def sign_flip_test(values: Sequence[float], alternative: str = "two-sided") -> float:
+    """Exact sign-flip (one-sample permutation) test of mean == 0.
 
-    With n lineages the smallest attainable p is 2 / 2**n (n=6 -> 0.031).
+    alternative: "two-sided", or "greater" for the pre-registered directional tests.
+    With n lineages the smallest attainable p is 2 / 2**n two-sided and 1 / 2**n
+    one-sided (n=6 -> 0.031 and 0.016).
     """
     x = np.asarray(values, dtype=float)
     n = len(x)
@@ -44,26 +46,47 @@ def sign_flip_test(values: Sequence[float]) -> float:
         return 1.0
     if n > 20:
         raise ValueError("use a Monte Carlo version for n > 20")
-    obs = abs(x.mean())
     signs = np.array(list(itertools.product([1, -1], repeat=n)))
-    means = np.abs((signs * x).mean(axis=1))
-    return float(np.mean(means >= obs - 1e-12))
+    means = (signs * x).mean(axis=1)
+    if alternative == "greater":
+        return float(np.mean(means >= x.mean() - 1e-12))
+    if alternative != "two-sided":
+        raise ValueError(alternative)
+    return float(np.mean(np.abs(means) >= abs(x.mean()) - 1e-12))
 
 
-def permutation_test(a: Sequence[float], b: Sequence[float]) -> float:
-    """Exact two-sided test of mean(a) == mean(b) over all relabellings (6+6 -> 924)."""
+def permutation_test(a: Sequence[float], b: Sequence[float], alternative: str = "two-sided") -> float:
+    """Exact test of mean(a) == mean(b) over all relabellings (6+6 -> 924).
+
+    alternative: "two-sided", or "greater" for H: mean(a) > mean(b).
+    """
+    if alternative not in ("two-sided", "greater"):
+        raise ValueError(alternative)
     a, b = np.asarray(a, float), np.asarray(b, float)
     pooled = np.concatenate([a, b])
     n, na = len(pooled), len(a)
-    obs = abs(a.mean() - b.mean())
+    obs = a.mean() - b.mean()
     total = pooled.sum()
     hits = count = 0
     for idx in itertools.combinations(range(n), na):
         sa = pooled[list(idx)].sum()
-        d = abs(sa / na - (total - sa) / (n - na))
-        hits += d >= obs - 1e-12
+        d = sa / na - (total - sa) / (n - na)
+        if alternative == "greater":
+            hits += d >= obs - 1e-12
+        else:
+            hits += abs(d) >= abs(obs) - 1e-12
         count += 1
     return hits / count
+
+
+def fixed_sequence(pvals: Sequence[float], alpha: float = 0.05) -> list[bool]:
+    """Fixed-sequence (hierarchical) testing: test in the pre-registered order at alpha each,
+    stop at the first non-rejection. Controls the family-wise error rate at alpha."""
+    out, go = [], True
+    for p in pvals:
+        go = go and p <= alpha
+        out.append(go)
+    return out
 
 
 def two_level_bootstrap(per_lineage: Sequence[Sequence[float]], b: int = 10_000,
