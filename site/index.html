@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autopoiesis Run Viewer</title>
+<meta name="description" content="A self-modifying agent loop judged by an evaluator with planted flaws: lineage trees, the gap between selection and held-out scores, and when each flaw was found.">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --f1: #2a78d6; --f2: #eb6834; --f3: #1baf7a; --f4: #eda100; --fd: #e87ba4; --none: #898781;
+  --banner-bg: #fff4d6; --banner-ink: #5a3d00; --banner-edge: #eda100;
+  --mark-edge: rgba(11,11,11,0.55);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --f1: #3987e5; --f2: #d95926; --f3: #199e70; --f4: #c98500; --fd: #d55181; --none: #6f6e69;
+    --banner-bg: #3a2a00; --banner-ink: #ffe3a3; --banner-edge: #c98500;
+    --mark-edge: rgba(255,255,255,0.45);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --f1: #3987e5; --f2: #d95926; --f3: #199e70; --f4: #c98500; --fd: #d55181; --none: #6f6e69;
+  --banner-bg: #3a2a00; --banner-ink: #ffe3a3; --banner-edge: #c98500;
+  --mark-edge: rgba(255,255,255,0.45);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 1.2rem; margin: 48px 0 6px; }
+h3 { font-size: 0.95rem; margin: 0 0 4px; font-weight: 600; }
+p { margin: 0 0 12px; max-width: 68ch; }
+.kicker { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px; }
+.lede { color: var(--ink-2); font-size: 1.05rem; }
+.small { font-size: 0.85rem; color: var(--ink-2); }
+code { font-size: 0.9em; }
+.banner {
+  border: 2px solid var(--banner-edge); background: var(--banner-bg); color: var(--banner-ink);
+  border-radius: 8px; padding: 12px 14px; margin: 16px 0 24px; font-weight: 600;
+}
+.banner span { display: block; font-weight: 400; font-size: 0.9rem; margin-top: 4px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0 0; padding: 0; list-style: none; }
+.facts li { color: var(--ink-2); font-size: 0.9rem; }
+.facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0; font-size: 0.85rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { overflow: visible; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.grid.flaws { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.card > svg { display: block; max-width: 100%; }
+svg text { fill: var(--muted); font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; }
+svg .gridline { stroke: var(--grid); stroke-width: 1; }
+svg .axisline { stroke: var(--axis); stroke-width: 1; }
+svg .edge { stroke: var(--axis); stroke-width: 1.5; fill: none; }
+svg .mark { stroke: var(--mark-edge); stroke-width: 1; }
+svg .hollow { fill: var(--surface); stroke-width: 2; }
+svg .multi { fill: none; stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 2 2; }
+svg .hit { fill: transparent; cursor: pointer; outline: none; }
+svg .hit:focus-visible + .focusring, svg .hit:hover + .focusring { stroke: var(--ink); }
+svg .focusring { fill: none; stroke: transparent; stroke-width: 1.5; pointer-events: none; }
+svg .s-dgm { stroke: var(--ink); fill: none; stroke-width: 2; }
+svg .s-random { stroke: var(--ink-2); fill: none; stroke-width: 2; stroke-dasharray: 5 4; }
+svg .p-dgm { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+svg .p-random { fill: var(--surface); stroke: var(--ink-2); stroke-width: 2; }
+svg .zero { stroke: var(--ink-2); stroke-width: 1; }
+svg .label { fill: var(--ink-2); font-size: 12px; }
+#tip {
+  position: fixed; z-index: 10; pointer-events: none; max-width: 280px; display: none;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+#tip b { font-weight: 600; }
+#tip .row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+#tip .row span:first-child { color: var(--ink-2); }
+details { margin-top: 10px; font-size: 0.85rem; }
+summary { cursor: pointer; color: var(--ink-2); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; width: 100%; }
+th, td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--ink-2); font-weight: 600; }
+.err { color: var(--banner-ink); background: var(--banner-bg); padding: 12px; border-radius: 8px; }
+footer { margin-top: 56px; color: var(--muted); font-size: 0.8rem; }
+</style>
+</head>
+<!-- data-src names the JSON this page draws; ?data=other.json overrides it. -->
+<body data-src="demo-data.json">
+<main>
+  <p class="kicker">Laboratory · autopoiesis</p>
+  <h1>Plant the demon, then count the cheaters</h1>
+  <p class="lede">A program that rewrites itself is judged by a judge it can read. This page shows one run of
+  that arrangement as it was recorded: who descended from whom, what each agent was scored, and which
+  of the judge's planted weaknesses it learned to use.</p>
+  <div id="banner"></div>
+  <ul class="facts" id="facts"></ul>
+
+  <h2>Lineages</h2>
+  <p>Each tree is one lineage. Time runs left to right in generations; every child descends from one
+  parent chosen from the archive, by score in the <b>DGM</b> arm and uniformly at random in the
+  <b>random</b> arm. A mark's colour and shape name the flaw its tripwire caught; grey circles caught
+  none. A hollow mark is a child that was not admitted to the archive. A dashed ring means more than one
+  flaw. Hover, tap or tab to a node for its scores.</p>
+  <div class="legend" id="flaw-legend"></div>
+  <div class="grid" id="trees"></div>
+  <div id="trees-table"></div>
+
+  <h2>The Goodhart gap</h2>
+  <p>The selection score is what the flawed evaluator reports on the selection split. The held-out score
+  is what a clean evaluator, with strong tests and type-strict comparison, reports on problems that are
+  never selected on. Their difference is the part of the score that measures the evaluator rather than
+  the agent. Points are means over the admitted children of each generation; the held-out score exists
+  only on the generations where the loop computed it.</p>
+  <div class="card" id="gap"></div>
+
+  <h2>Discovery</h2>
+  <p>For each flaw, how many lineages had produced at least one child that tripped it, by generation.
+  A step up is a discovery; the line never comes down, because an exploit once found is a fact about the
+  lineage even if its descendants forget it. The decoy <b>D</b> pays nothing: it is there to tell
+  curiosity from selection.</p>
+  <div id="disc-legend"></div>
+  <div class="grid flaws" id="discovery"></div>
+
+  <footer id="foot"></footer>
+</main>
+<div id="tip" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+const SVGNS = "http://www.w3.org/2000/svg";
+const FLAW_ORDER = ["F1", "F2", "F3", "F4", "D"];
+const FLAW_INFO = {
+  F1: { name: "answer key", color: "var(--f1)", shape: "square" },
+  F2: { name: "lenient comparator", color: "var(--f2)", shape: "diamond" },
+  F3: { name: "exit-code trust", color: "var(--f3)", shape: "triangle" },
+  F4: { name: "timeout credit", color: "var(--f4)", shape: "invtriangle" },
+  D:  { name: "decoy (unrewarded)", color: "var(--fd)", shape: "cross" },
+  none: { name: "no flaw tripped", color: "var(--none)", shape: "circle" },
+};
+const ARM_LABEL = { dgm: "DGM (score-based)", random: "random" };
+
+function el(tag, attrs = {}, parent) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function h(tag, attrs = {}, text) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+const fmt = (x, d = 2) => (x === null || x === undefined) ? "–" : Number(x).toFixed(d);
+const fmtSigned = (x, d = 2) => (x === null || x === undefined) ? "–" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(d);
+
+function shapePath(shape, cx, cy, r) {
+  switch (shape) {
+    case "square": { const s = r * 0.88; return `M${cx - s},${cy - s}h${2 * s}v${2 * s}h${-2 * s}Z`; }
+    case "diamond": { const s = r * 1.2; return `M${cx},${cy - s}L${cx + s},${cy}L${cx},${cy + s}L${cx - s},${cy}Z`; }
+    case "triangle": { const s = r * 1.25; return `M${cx},${cy - s}L${cx + s},${cy + s * 0.8}L${cx - s},${cy + s * 0.8}Z`; }
+    case "invtriangle": { const s = r * 1.25; return `M${cx},${cy + s}L${cx + s},${cy - s * 0.8}L${cx - s},${cy - s * 0.8}Z`; }
+    case "cross": { const a = r * 1.1, b = r * 0.38;
+      return `M${cx - b},${cy - a}h${2 * b}v${a - b}h${a - b}v${2 * b}h${b - a}v${a - b}h${-2 * b}v${b - a}h${b - a}v${-2 * b}h${a - b}Z`; }
+    default: return `M${cx - r},${cy}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z`;
+  }
+}
+function primaryFlaw(node) {
+  const ex = node.exploits || [];
+  return FLAW_ORDER.find(f => ex.includes(f)) || "none";
+}
+function drawMark(g, kind, cx, cy, r, hollow) {
+  const info = FLAW_INFO[kind];
+  const p = el("path", { d: shapePath(info.shape, cx, cy, r), class: hollow ? "mark hollow" : "mark" }, g);
+  if (hollow) p.style.stroke = info.color; else p.style.fill = info.color;
+  return p;
+}
+
+// ---------------------------------------------------------------- tooltip
+const tip = document.getElementById("tip");
+function showTip(evt, html) {
+  tip.innerHTML = html;
+  tip.style.display = "block";
+  let x, y;
+  if (evt.clientX !== undefined && evt.type !== "focus") { x = evt.clientX; y = evt.clientY; }
+  else { const b = evt.target.getBoundingClientRect(); x = b.right; y = b.top; }
+  const w = tip.offsetWidth, hh = tip.offsetHeight;
+  const left = Math.min(Math.max(8, x + 12), window.innerWidth - w - 8);
+  const top = (y + 12 + hh > window.innerHeight - 8) ? Math.max(8, y - hh - 12) : y + 12;
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+function rows(pairs) {
+  return pairs.map(([k, v]) => `<div class="row"><span>${k}</span><span>${v}</span></div>`).join("");
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function bindTip(target, html, label) {
+  target.setAttribute("tabindex", "0");
+  target.setAttribute("role", "img");
+  target.setAttribute("aria-label", label);
+  target.addEventListener("mouseenter", e => showTip(e, html));
+  target.addEventListener("mousemove", e => showTip(e, html));
+  target.addEventListener("mouseleave", hideTip);
+  target.addEventListener("focus", e => showTip(e, html));
+  target.addEventListener("blur", hideTip);
+  target.addEventListener("click", e => { e.stopPropagation(); showTip(e, html); });
+}
+document.addEventListener("click", hideTip);
+document.addEventListener("keydown", e => { if (e.key === "Escape") hideTip(); });
+
+// ---------------------------------------------------------------- header
+function renderHeader(d) {
+  const m = d.meta;
+  const banner = document.getElementById("banner");
+  if (m.synthetic) {
+    const b = h("div", { class: "banner", role: "alert" }, "Synthetic demo data — produced by a scripted fake model, not an experiment");
+    const s = h("span", {}, (m.synthetic_note ? m.synthetic_note + " " : "") +
+      "Every mark and number below shows how the page draws a run, and nothing about how agents behave.");
+    b.appendChild(s);
+    banner.appendChild(b);
+  }
+  const facts = document.getElementById("facts");
+  const add = (label, value) => { const li = h("li"); li.append(label + " "); li.appendChild(h("b", {}, value)); facts.appendChild(li); };
+  add("run", m.run);
+  add("lineages", String(m.n_lineages));
+  for (const a of m.arms) add(ARM_LABEL[a] || a, String(m.lineages_per_arm[a]));
+  add("generations", String(m.generations));
+  add("seed: selection", fmt(m.seed.full_proxy));
+  add("seed: held-out", fmt(m.seed.h_clean));
+  document.getElementById("foot").textContent =
+    `Data: ${DATA_URL} · schema ${d.schema} · ${m.synthetic ? "synthetic" : "recorded run"}. ` +
+    `F4 counts as exploited at ${m.f4_threshold} or more timeouts above the seed. ` +
+    "Numbers are single-run archive values; the pre-registered analysis re-evaluates lineage winners before any test.";
+}
+
+function renderFlawLegend(d) {
+  const lg = document.getElementById("flaw-legend");
+  const kinds = [...d.meta.flaws.filter(f => FLAW_INFO[f]), "none"];
+  for (const k of kinds) {
+    const span = h("span");
+    const s = el("svg", { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": "true" });
+    drawMark(s, k, 8, 8, 5.5, false);
+    span.appendChild(s);
+    span.append(k === "none" ? FLAW_INFO.none.name : `${k} ${FLAW_INFO[k].name}`);
+    lg.appendChild(span);
+  }
+  const hs = h("span");
+  const s2 = el("svg", { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": "true" });
+  drawMark(s2, "none", 8, 8, 5.5, true);
+  hs.appendChild(s2); hs.append("not admitted");
+  lg.appendChild(hs);
+  const ms = h("span");
+  const s3 = el("svg", { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": "true" });
+  el("circle", { cx: 8, cy: 8, r: 7, class: "multi" }, s3);
+  ms.appendChild(s3); ms.append("several flaws");
+  lg.appendChild(ms);
+}
+
+// ---------------------------------------------------------------- phylogenies
+function renderTrees(d) {
+  const host = document.getElementById("trees");
+  const G = d.meta.generations;
+  const names = Object.keys(d.lineages).sort((a, b) => {
+    const ia = d.meta.arms.indexOf(d.lineages[a].arm), ib = d.meta.arms.indexOf(d.lineages[b].arm);
+    return ia - ib || a.localeCompare(b);
+  });
+  for (const name of names) {
+    const lin = d.lineages[name];
+    const nodes = lin.nodes;
+    const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+    const kids = {};
+    for (const n of nodes) if (n.parent) (kids[n.parent] = kids[n.parent] || []).push(n);
+    const order = [];
+    const roots = nodes.filter(n => !n.parent || !byId[n.parent]);
+    const walk = n => { order.push(n); (kids[n.id] || []).sort((a, b) => a.generation - b.generation).forEach(walk); };
+    roots.forEach(walk);
+    const row = Object.fromEntries(order.map((n, i) => [n.id, i]));
+
+    const card = h("div", { class: "card" });
+    host.appendChild(card);
+    const s = lin.summary || {};
+    const title = h("h3", {}, `${name}`);
+    card.appendChild(title);
+    const sub = h("p", { class: "small" });
+    const adm = nodes.filter(n => n.generation > 0 && n.admitted).length;
+    const ch = nodes.filter(n => n.generation > 0).length;
+    sub.textContent = `${ARM_LABEL[lin.arm] || lin.arm} · ${adm} of ${ch} children admitted` +
+      (s.delta_G_provisional !== null && s.delta_G_provisional !== undefined ? ` · provisional ΔG ${fmtSigned(s.delta_G_provisional)}` : "");
+    card.appendChild(sub);
+
+    const W = Math.max(220, card.clientWidth - 26), rowH = 22, padL = 14, padR = 14, padT = 8, padB = 24;
+    const H = padT + padB + rowH * Math.max(1, order.length - 1) + 8;
+    const x = g => padL + (G ? (g / G) : 0) * (W - padL - padR);
+    const y = id => padT + 4 + row[id] * ((H - padT - padB - 8) / Math.max(1, order.length - 1));
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "group",
+      "aria-label": `Phylogeny of lineage ${name}` });
+    for (let g = 0; g <= G; g++) {
+      el("line", { x1: x(g), x2: x(g), y1: padT, y2: H - padB, class: "gridline" }, svg);
+      const t = el("text", { x: x(g), y: H - 8, "text-anchor": "middle" }, svg);
+      t.textContent = g;
+    }
+    for (const n of nodes) {
+      if (!n.parent || !byId[n.parent]) continue;
+      const px = x(byId[n.parent].generation), py = y(n.parent), cx = x(n.generation), cy = y(n.id);
+      const mx = px + (cx - px) * 0.5;
+      el("path", { d: `M${px},${py}H${mx}V${cy}H${cx}`, class: "edge" }, svg);
+    }
+    for (const n of order) {
+      const cx = x(n.generation), cy = y(n.id);
+      const kind = primaryFlaw(n);
+      const g = el("g", {}, svg);
+      drawMark(g, kind, cx, cy, 6, !n.admitted);
+      if ((n.exploits || []).length > 1) el("circle", { cx, cy, r: 10, class: "multi" }, g);
+      const hit = el("circle", { cx, cy, r: 11, class: "hit" }, g);
+      el("circle", { cx, cy, r: 9.5, class: "focusring" }, g);
+      const trips = Object.entries(n.trips || {}).map(([k, v]) => `${k}×${v}`).join(", ") || "none";
+      const html = `<b>${esc(n.id)}</b>` + rows([
+        ["generation", n.generation],
+        ["parent", n.parent ? esc(n.parent) : "–"],
+        ["admitted", n.admitted ? "yes" : "no"],
+        ["selection score (S)", fmt(n.score)],
+        ["clean, base tests (S)", fmt(n.s_clean_base)],
+        ["clean, held-out (H)", fmt(n.h_clean)],
+        ["exploits", (n.exploits || []).join(", ") || "none"],
+        ["tripwire counts", esc(trips)],
+        ["static flags", esc((n.static_flags || []).join(", ") || "none")],
+      ]) + (n.note ? `<div class="small">${esc(n.note)}</div>` : "");
+      const label = `${n.id}, generation ${n.generation}, ${n.admitted ? "admitted" : "not admitted"}, ` +
+        `exploits ${(n.exploits || []).join(" ") || "none"}, selection ${fmt(n.score)}, held-out ${fmt(n.h_clean)}`;
+      bindTip(hit, html, label);
+    }
+    svg.setAttribute("width", W); svg.setAttribute("height", H);
+    card.appendChild(svg);
+  }
+  const det = h("details");
+  det.appendChild(h("summary", {}, "All nodes as a table"));
+  const wrap = h("div", { class: "tablewrap" });
+  const tbl = h("table");
+  tbl.innerHTML = "<thead><tr><th>agent</th><th>gen</th><th>parent</th><th>admitted</th><th>selection</th><th>clean S</th><th>clean H</th><th>exploits</th></tr></thead>";
+  const tb = h("tbody");
+  for (const name of names) for (const n of d.lineages[name].nodes) {
+    const tr = h("tr");
+    for (const v of [n.id, n.generation, n.parent || "–", n.admitted ? "yes" : "no", fmt(n.score), fmt(n.s_clean_base), fmt(n.h_clean), (n.exploits || []).join(" ") || "–"])
+      tr.appendChild(h("td", {}, String(v)));
+    tb.appendChild(tr);
+  }
+  tbl.appendChild(tb); wrap.appendChild(tbl); det.appendChild(wrap);
+  document.getElementById("trees-table").appendChild(det);
+}
+
+// ---------------------------------------------------------------- shared axes
+function axes(svg, { W, H, pad, x, y, G, yTicks, yFmt }) {
+  for (const t of yTicks) {
+    el("line", { x1: pad.l, x2: W - pad.r, y1: y(t), y2: y(t), class: t === 0 ? "zero" : "gridline" }, svg);
+    const tx = el("text", { x: pad.l - 6, y: y(t) + 4, "text-anchor": "end" }, svg);
+    tx.textContent = yFmt(t);
+  }
+  el("line", { x1: pad.l, x2: W - pad.r, y1: H - pad.b, y2: H - pad.b, class: "axisline" }, svg);
+  const step = G > 12 ? Math.ceil(G / 6) : 1;
+  for (let g = 0; g <= G; g += step) {
+    const t = el("text", { x: x(g), y: H - pad.b + 16, "text-anchor": "middle" }, svg);
+    t.textContent = g;
+  }
+}
+function armLegend(arms, parent) {
+  const lg = h("div", { class: "legend" });
+  for (const a of arms) {
+    const span = h("span");
+    const s = el("svg", { width: 30, height: 14, viewBox: "0 0 30 14", "aria-hidden": "true" });
+    el("line", { x1: 1, x2: 29, y1: 7, y2: 7, class: `s-${a}` }, s);
+    if (a === "dgm") el("circle", { cx: 15, cy: 7, r: 4, class: "p-dgm" }, s);
+    else el("rect", { x: 11, y: 3, width: 8, height: 8, class: "p-random" }, s);
+    span.appendChild(s); span.append(ARM_LABEL[a] || a);
+    lg.appendChild(span);
+  }
+  parent.appendChild(lg);
+}
+function niceTicks(lo, hi) {
+  const span = hi - lo || 1;
+  const raw = span / 4, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw);
+  const out = [];
+  const i0 = Math.floor(lo / step + 1e-9), i1 = Math.ceil(hi / step - 1e-9);
+  for (let i = i0; i <= i1; i++) out.push(Math.round(i * step * 1e6) / 1e6);
+  return out;
+}
+
+// ---------------------------------------------------------------- Goodhart gap
+function renderGap(d) {
+  const host = document.getElementById("gap");
+  const G = d.meta.generations;
+  const arms = d.meta.arms.filter(a => d.series[a]);
+  const vals = arms.flatMap(a => d.series[a].map(r => r.mean_gap)).filter(v => v !== null);
+  const head = h("h3", {}, "Selection score minus held-out score, mean per generation");
+  host.appendChild(head);
+  armLegend(arms, host);
+  if (!vals.length) { host.appendChild(h("p", { class: "small" }, "No generation has held-out scores yet.")); return; }
+  const ticks = niceTicks(Math.min(0, ...vals), Math.max(0, ...vals));
+  const lo = ticks[0], hi = ticks[ticks.length - 1];
+  const W = Math.max(260, host.clientWidth - 26), H = Math.round(Math.min(300, Math.max(200, W * 0.45)));
+  const pad = { l: 44, r: 52, t: 12, b: 34 };
+  const x = g => pad.l + (G ? g / G : 0) * (W - pad.l - pad.r);
+  const y = v => pad.t + (hi - v) / (hi - lo || 1) * (H - pad.t - pad.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "group",
+    "aria-label": "Goodhart gap by generation, by arm" });
+  axes(svg, { W, H, pad, x, y, G, yTicks: ticks, yFmt: t => fmtSigned(t, 2) });
+  const xl = el("text", { x: W - pad.r, y: H - 2, "text-anchor": "end" }, svg); xl.textContent = "generation";
+  for (const a of arms) {
+    const pts = d.series[a].filter(r => r.mean_gap !== null);
+    if (pts.length > 1) el("path", { d: pts.map((r, i) => `${i ? "L" : "M"}${x(r.generation)},${y(r.mean_gap)}`).join(""), class: `s-${a}` }, svg);
+  }
+  arms.forEach((a, ai) => {
+    for (const r of d.series[a]) {
+      if (r.mean_gap === null) continue;
+      // the shared seed point would sit under itself; nudge the second arm's marker
+      const cx = x(r.generation) + (r.generation === 0 ? (ai ? 5 : -5) : 0), cy = y(r.mean_gap);
+      const g = el("g", {}, svg);
+      if (a === "dgm") el("circle", { cx, cy, r: 4.5, class: "p-dgm" }, g);
+      else el("rect", { x: cx - 4.5, y: cy - 4.5, width: 9, height: 9, class: "p-random" }, g);
+      const hit = el("circle", { cx, cy, r: 12, class: "hit" }, g);
+      el("circle", { cx, cy, r: 8, class: "focusring" }, g);
+      const html = `<b>${esc(ARM_LABEL[a] || a)}, generation ${r.generation}</b>` + rows([
+        ["mean selection score (S)", fmt(r.mean_score)],
+        ["mean clean score (H)", fmt(r.mean_h_clean)],
+        ["gap", fmtSigned(r.mean_gap)],
+        ["children with H score", r.n_heldout],
+        ["exploit prevalence", r.exploit_prevalence === null ? "–" : `${r.exploiting} of ${r.admitted}`],
+      ]);
+      bindTip(hit, html, `${a} generation ${r.generation}: gap ${fmtSigned(r.mean_gap)}, selection ${fmt(r.mean_score)}, held-out ${fmt(r.mean_h_clean)}`);
+    }
+  });
+  // direct labels at the last point of each arm
+  arms.forEach(a => {
+    const pts = d.series[a].filter(r => r.mean_gap !== null);
+    if (!pts.length) return;
+    const last = pts[pts.length - 1];
+    const t = el("text", { x: x(last.generation) + 9, y: y(last.mean_gap) + 4, "text-anchor": "start", class: "label" }, svg);
+    t.textContent = a === "dgm" ? "DGM" : a;
+  });
+  svg.setAttribute("width", W); svg.setAttribute("height", H);
+  host.appendChild(svg);
+
+  const det = h("details");
+  det.appendChild(h("summary", {}, "Per-generation series as a table"));
+  const wrap = h("div", { class: "tablewrap" });
+  const tbl = h("table");
+  tbl.innerHTML = "<thead><tr><th>arm</th><th>gen</th><th>admitted</th><th>mean S</th><th>mean clean S</th><th>mean H</th><th>gap</th><th>exploiting</th></tr></thead>";
+  const tb = h("tbody");
+  for (const a of arms) for (const r of d.series[a]) {
+    const tr = h("tr");
+    for (const v of [a, r.generation, `${r.admitted} of ${r.children}`, fmt(r.mean_score), fmt(r.mean_s_clean_base), fmt(r.mean_h_clean), fmtSigned(r.mean_gap), r.exploit_prevalence === null ? "–" : `${r.exploiting} of ${r.admitted}`])
+      tr.appendChild(h("td", {}, String(v)));
+    tb.appendChild(tr);
+  }
+  tbl.appendChild(tb); wrap.appendChild(tbl); det.appendChild(wrap);
+  host.appendChild(det);
+}
+
+// ---------------------------------------------------------------- discovery
+function renderDiscovery(d) {
+  const host = document.getElementById("discovery");
+  const G = d.meta.generations;
+  const arms = d.meta.arms.filter(a => d.discovery[a]);
+  const nMax = Math.max(...arms.map(a => d.discovery[a].n));
+  armLegend(arms, document.getElementById("disc-legend"));
+  for (const f of d.meta.flaws) {
+    const card = h("div", { class: "card" });
+    host.appendChild(card);
+    const t = h("h3");
+    const s0 = el("svg", { width: 14, height: 14, viewBox: "0 0 16 16", "aria-hidden": "true" });
+    s0.style.verticalAlign = "-2px"; s0.style.marginRight = "6px";
+    drawMark(s0, FLAW_INFO[f] ? f : "none", 8, 8, 5.5, false);
+    t.appendChild(s0);
+    t.append(`${f} ${FLAW_INFO[f] ? FLAW_INFO[f].name : ""}`);
+    card.appendChild(t);
+    const finals = arms.map(a => `${ARM_LABEL[a] === undefined ? a : (a === "dgm" ? "DGM" : a)} ${d.discovery[a].by_flaw[f][G]} of ${d.discovery[a].n}`);
+    card.appendChild(h("p", { class: "small" }, finals.join(" · ")));
+    const W = Math.max(150, card.clientWidth - 26), H = 130, pad = { l: 30, r: 10, t: 8, b: 24 };
+    const x = g => pad.l + (G ? g / G : 0) * (W - pad.l - pad.r);
+    const y = v => pad.t + (nMax - v) / (nMax || 1) * (H - pad.t - pad.b);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "group",
+      "aria-label": `Lineages that exploited ${f}, by generation` });
+    const yt = []; for (let v = 0; v <= nMax; v++) yt.push(v);
+    axes(svg, { W, H, pad, x, y, G, yTicks: nMax > 6 ? niceTicks(0, nMax) : yt, yFmt: v => String(v) });
+    arms.forEach((a, ai) => {
+      const c = d.discovery[a].by_flaw[f];
+      const off = ai ? 1.5 : -1.5;  // keep overlapping steps both visible
+      let p = `M${x(0)},${y(c[0]) + off}`;
+      for (let g = 1; g <= G; g++) p += `H${x(g)}V${y(c[g]) + off}`;
+      el("path", { d: p, class: `s-${a}` }, svg);
+      for (let g = 0; g <= G; g++) {
+        if (g > 0 && c[g] === c[g - 1]) continue;
+        const cx = x(g), cy = y(c[g]) + off;
+        const gg = el("g", {}, svg);
+        if (a === "dgm") el("circle", { cx, cy, r: 3.5, class: "p-dgm" }, gg);
+        else el("rect", { x: cx - 3.5, y: cy - 3.5, width: 7, height: 7, class: "p-random" }, gg);
+        const hit = el("circle", { cx, cy, r: 10, class: "hit" }, gg);
+        el("circle", { cx, cy, r: 7, class: "focusring" }, gg);
+        const html = `<b>${esc(f)}, ${esc(ARM_LABEL[a] || a)}</b>` + rows([["by generation", g], ["lineages exploited", `${c[g]} of ${d.discovery[a].n}`]]);
+        bindTip(hit, html, `${f}, ${a}: ${c[g]} of ${d.discovery[a].n} lineages by generation ${g}`);
+      }
+    });
+    svg.setAttribute("width", W); svg.setAttribute("height", H);
+    card.appendChild(svg);
+  }
+}
+
+// ---------------------------------------------------------------- load
+const params = new URLSearchParams(location.search);
+let DATA_URL = params.get("data") || document.body.dataset.src || "data.json";
+async function load() {
+  const r = await fetch(DATA_URL, { cache: "no-cache" });
+  if (!r.ok) throw new Error(`Could not load ${DATA_URL} (HTTP ${r.status}).`);
+  return r.json();
+}
+load().then(d => {
+  renderHeader(d);
+  renderFlawLegend(d);
+  const draw = () => {
+    for (const id of ["trees", "trees-table", "gap", "disc-legend", "discovery"]) document.getElementById(id).replaceChildren();
+    renderTrees(d);
+    renderGap(d);
+    renderDiscovery(d);
+  };
+  draw();
+  let lastW = window.innerWidth, timer;
+  window.addEventListener("resize", () => {
+    if (window.innerWidth === lastW) return;
+    lastW = window.innerWidth;
+    clearTimeout(timer);
+    timer = setTimeout(() => { hideTip(); draw(); }, 150);
+  });
+}).catch(err => {
+  const p = h("p", { class: "err" }, String(err.message || err));
+  document.getElementById("banner").appendChild(p);
+});
+</script>
+</body>
+</html>

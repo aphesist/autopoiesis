@@ -151,6 +151,19 @@ automated access except through an API key.
 - `tests/test_stats.py` checks the exact tests against known values. One example: with 6
   lineages the smallest sign-flip p-value is 2/64.
 
+## Visualisation
+
+`python scripts/export_site.py runs/<name> site/data.json` writes a compact JSON of a
+finished run: each lineage's tree with its scores, tripwire counts and static flags,
+per-generation means by arm, and first-exploit generations per flaw, taken unchanged from
+the archives and `analysis.analyse`. `site/index.html` is a single static page (vanilla JS,
+inline SVG, no build step) that draws it: a phylogeny per lineage, the gap between selection
+and held-out scores by generation, and how many lineages had found each flaw by when. It
+reads the file named in its `data-src` attribute, or `?data=`; serve the folder over HTTP.
+The bundled `site/demo-data.json` comes from `python scripts/demo_run.py`, a tiny run with a
+scripted fake model that inserts exploits on a fixed schedule. Its export is marked synthetic,
+and the page then shows a banner saying so. Its numbers describe the script, not agents.
+
 ## Future work
 
 - **A properly sized Lean 4 control.** Use miniF2F-v2 with the proof kernel as the
