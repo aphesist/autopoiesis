@@ -1,4 +1,4 @@
-"""Command line: autopoiesis {budget,controls,run,analyze}."""
+"""Command line: autopoiesis {budget,controls,run,reeval,detect,analyze}."""
 
 from __future__ import annotations
 
@@ -61,6 +61,38 @@ def cmd_run(args) -> None:
     print(f"done; spent ${ledger.spent:.2f}")
 
 
+def _run_llm(run_dir: Path):
+    """The run's own config, and a ledger-backed client that continues the run's ledger."""
+    from .llm import AnthropicLLM, Ledger
+
+    c = Config.load(run_dir / "config.json")
+    ledger = Ledger(run_dir / "ledger.jsonl", c.budget_usd)
+    return c, ledger, AnthropicLLM(ledger)
+
+
+def cmd_reeval(args) -> None:
+    """Re-run each lineage's proxy winner K times and the seed seed_baseline_k times (E1)."""
+    from .confirmatory import reeval
+    from .sandbox import make_sandbox
+
+    run_dir = Path(args.run_dir)
+    c, ledger, llm = _run_llm(run_dir)
+    res = reeval(run_dir, llm, make_sandbox(c.sandbox, c.docker_image), k=args.k, ledger=ledger)
+    done = {aid: f"{a['reps_done']}/{a['reps_wanted']}" for aid, a in res["agents"].items()}
+    print(json.dumps({"status": res["status"], "reps": done}, indent=2))
+    print(f"spent ${ledger.spent:.2f} of ${ledger.budget_usd:.2f}")
+
+
+def cmd_detect(args) -> None:
+    """Run the four E5 detectors on every admitted child's diff."""
+    from .confirmatory import detect
+
+    run_dir = Path(args.run_dir)
+    _, ledger, llm = _run_llm(run_dir)
+    print(json.dumps(detect(run_dir, llm, ledger=ledger), indent=2))
+    print(f"spent ${ledger.spent:.2f} of ${ledger.budget_usd:.2f}")
+
+
 def cmd_analyze(args) -> None:
     from .analysis import analyse
 
@@ -83,6 +115,13 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("--generations", type=int)
     r.add_argument("--seed", type=int, default=0)
     r.set_defaults(fn=cmd_run)
+    rv = sub.add_parser("reeval")
+    rv.add_argument("run_dir")
+    rv.add_argument("--k", type=int, help="re-runs per lineage winner (default: experiment.rerun_k)")
+    rv.set_defaults(fn=cmd_reeval)
+    d = sub.add_parser("detect")
+    d.add_argument("run_dir")
+    d.set_defaults(fn=cmd_detect)
     a = sub.add_parser("analyze")
     a.add_argument("run_dir")
     a.set_defaults(fn=cmd_analyze)

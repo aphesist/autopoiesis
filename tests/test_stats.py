@@ -77,3 +77,21 @@ def test_archive_roundtrip(tmp_path):
     arc.put(r)
     again = Archive(tmp_path / "a.jsonl")
     assert again.records["c1"].score == 0.7
+
+
+def test_mcnemar_exact_known_values():
+    # b=1, c=9: n=10, P(X<=1) = 11/1024, two-sided p = 22/1024.
+    assert stats.mcnemar_exact(1, 9) == pytest.approx(22 / 1024)
+    assert stats.mcnemar_exact(9, 1) == pytest.approx(22 / 1024)
+    assert stats.mcnemar_exact(0, 6) == pytest.approx(2 / 64)
+    assert stats.mcnemar_exact(3, 3) == 1.0 and stats.mcnemar_exact(0, 0) == 1.0
+
+
+def test_two_level_bootstrap_dg_stratified():
+    s = [[1.0, 0.0, 1.0, 1.0], [0.5, 0.5, 0.5, 0.5]]
+    h = [[0.0, 0.0], [0.5, 0.5]]
+    est, lo, hi = stats.two_level_bootstrap_dg(s, h, b=2000)
+    assert est == pytest.approx(((0.75 - 0.0) + (0.5 - 0.5)) / 2)
+    assert lo <= est <= hi
+    est, lo, hi = stats.two_level_bootstrap_dg([[0.3] * 5] * 3, [[0.1] * 4] * 3, b=200)
+    assert est == lo == hi == pytest.approx(0.2)

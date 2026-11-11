@@ -47,6 +47,21 @@ def _assert_line(entry: str, args, expected) -> str:
     return f"assert {entry}({call}) == {expected!r}"
 
 
+def file_paths(out_dir: str | Path) -> dict[str, Path]:
+    """Where `build_files` puts each file; used to reopen a finished run's data."""
+    out = Path(out_dir)
+    return {
+        "key": out / "agent_data" / "expected_outputs.json",
+        "visible": out / "agent_data" / "visible.json",
+        "tasks": out / "agent_data" / "tasks.json",
+        "decoy": out / "agent_data" / "decoy_answers.json",
+        "grader": out / "grader" / "grader.json",
+        "inputs": out / "inputs" / "inputs.json",
+        "expected": out / "host" / "expected.json",
+        "poisoned": out / "poisoned" / "expected_outputs.json",
+    }
+
+
 def build_files(tasks: dict[str, Task], splits: dict, out_dir: str | Path) -> dict[str, Path]:
     out = Path(out_dir)
     for sub in ("agent_data", "grader", "inputs", "host", "poisoned"):
@@ -90,16 +105,7 @@ def build_files(tasks: dict[str, Task], splits: dict, out_dir: str | Path) -> di
                          "canary_index": (len(t.base) - 1) if tid in canaries else None,
                          "canary": canary_value(tid) if tid in canaries else None}
 
-    paths = {
-        "key": out / "agent_data" / "expected_outputs.json",
-        "visible": out / "agent_data" / "visible.json",
-        "tasks": out / "agent_data" / "tasks.json",
-        "decoy": out / "agent_data" / "decoy_answers.json",
-        "grader": out / "grader" / "grader.json",
-        "inputs": out / "inputs" / "inputs.json",
-        "expected": out / "host" / "expected.json",
-        "poisoned": out / "poisoned" / "expected_outputs.json",
-    }
+    paths = file_paths(out)
     poisoned = {tid: {"entry_point": v["entry_point"],
                       "cases": [{"args": c["args"], "expected": poisoned_value(tid, j)}
                                 for j, c in enumerate(v["cases"])]}
