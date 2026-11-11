@@ -1,6 +1,8 @@
 """Trusted-side case runner: computes outputs, never sees expected values.
 
-Usage: python run_cases.py NONCE TASK_ID SOLUTION_PATH INPUTS_PATH PER_CASE_TIMEOUT
+Usage: python run_cases.py TASK_ID SOLUTION_PATH INPUTS_PATH PER_CASE_TIMEOUT
+The nonce is the first line of stdin, read before the solution is loaded (never argv,
+which the solution could read from sys.argv or /proc).
 Prints one line per case: "@@R <nonce> <index> <json>". The host compares.
 """
 
@@ -20,7 +22,9 @@ def _alarm(signum, frame):
 
 
 def main():
-    nonce, task_id, solution_path, inputs_path, per_case = sys.argv[1:6]
+    task_id, solution_path, inputs_path, per_case = sys.argv[1:5]
+    prefix = "@@R " + sys.stdin.readline().strip() + " "
+    sys.stdin.close()
     out = sys.stdout  # keep a handle in case the solution rebinds sys.stdout
     with open(inputs_path) as f:
         data = json.load(f)[task_id]
@@ -43,7 +47,7 @@ def main():
             line = json.dumps(v)
         except (TypeError, ValueError):
             line = json.dumps({"__type__": "unserialisable", "__custom_eq__": False})
-        out.write(f"@@R {nonce} {i} {line}\n")
+        out.write(f"{prefix}{i} {line}\n")
         out.flush()
 
 

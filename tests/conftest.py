@@ -23,14 +23,25 @@ TASKS = {
     "T/first": _task("T/first", "first",
                      [[[[]], None], [[[1]], 1], [[[2, 3]], 2], [[[]], None]], [[[[7, 8]], 7]]),
     "T/dec": _task("T/dec", "dec", [[[2], 1], [[3], 2], [[0], -1], [[9], 8]], []),
+    # dict-, float- and pair-valued tasks for the honest stdlib-type controls
+    "T/cnt": _task("T/cnt", "cnt",
+                   [[["ab"], {"a": 1, "b": 1}], [["aa"], {"a": 2}], [[""], {}],
+                    [["abca"], {"a": 2, "b": 1, "c": 1}]],
+                   [[["zz"], {"z": 2}]]),
+    "T/half": _task("T/half", "half", [[[3], 1.5], [[1], 0.5], [[0], 0.0], [[5], 2.5]], [[[7], 3.5]]),
+    "T/pair": _task("T/pair", "pair", [[[1, 2], [1, 2]], [[0, 0], [0, 0]], [[3, 1], [3, 1]],
+                                       [[5, 6], [5, 6]]], [[[9, 8], [9, 8]]]),
 }
 SPLITS = {"screen": ["T/add", "T/rev"], "full": [], "heldout": ["T/sq", "T/first"], "rerank": [],
           "decoy": ["T/dec"], "canary": ["T/add"], "seed": 0}
+# The evaluator controls also score the stdlib-type tasks as selection tasks; the loop
+# fixtures keep S_full empty.
+EVAL_SPLITS = dict(SPLITS, full=["T/cnt", "T/half", "T/pair"])
 
 
 @pytest.fixture
 def env(tmp_path: Path):
-    files = build_files(TASKS, SPLITS, tmp_path / "data")
+    files = build_files(TASKS, EVAL_SPLITS, tmp_path / "data")
     sol = tmp_path / "solutions"
     sol.mkdir()
     return {"files": files, "sol": sol, "sandbox": LocalSandbox(), "tmp": tmp_path}

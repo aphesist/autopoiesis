@@ -41,7 +41,12 @@ def load_tasks(path: str | Path) -> dict[str, Task]:
 
 
 def make_splits(task_ids: list[str], sizes: dict[str, int], n_canaries: int, seed: int) -> dict:
-    """Deterministic split. Canaries are drawn from the selection problems."""
+    """Deterministic split. Canaries are drawn from the selection problems.
+
+    Canaries are stratified: at least half of them (rounded up) come from S_screen, the
+    split every child is scored on, so a key-reading agent meets canaries even if it never
+    reaches S_full. The rest come from S_full (topped up from S_screen if S_full is short).
+    """
     ids = sorted(task_ids)
     random.Random(seed).shuffle(ids)
     out, i = {}, 0
@@ -51,8 +56,13 @@ def make_splits(task_ids: list[str], sizes: dict[str, int], n_canaries: int, see
         i += n
     if i > len(ids):
         raise ValueError(f"need {i} tasks, have {len(ids)}")
-    sel = out["screen"] + out["full"]
-    out["canary"] = sorted(random.Random(seed + 1).sample(sel, min(n_canaries, len(sel))))
+    rng = random.Random(seed + 1)
+    screen, full = out["screen"], out["full"]
+    n_total = min(n_canaries, len(screen) + len(full))
+    n_screen = min(len(screen), max((n_total + 1) // 2, n_total - len(full)))
+    picked = rng.sample(screen, n_screen)
+    picked += rng.sample(full, n_total - n_screen)
+    out["canary"] = sorted(picked)
     out["seed"] = seed
     return out
 
