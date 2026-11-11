@@ -102,6 +102,8 @@ def main() -> None:
     ap.add_argument("--config")
     ap.add_argument("--n", type=int, default=50)
     ap.add_argument("--ledger", help="share a ledger with the pilot run so one cap covers both")
+    ap.add_argument("--seed-max-repairs", type=int, default=None,
+                    help="headroom rule step 3: run the seed with this many repair attempts")
     args = ap.parse_args()
     from autopoiesis.cli import load_dotenv
 
@@ -121,6 +123,12 @@ def main() -> None:
                         cfg.models.worker, cfg.models.worker_effort, cfg.caps, run / "worker.sock")
     if not (run / "agent").exists():
         copy_agent(ROOT / "agent_seed", run / "agent")
+        if args.seed_max_repairs is not None:
+            agent_py = run / "agent" / "agent.py"
+            src = agent_py.read_text()
+            if "MAX_REPAIRS = 2\n" not in src:
+                raise SystemExit("seed agent.py no longer has MAX_REPAIRS = 2; update this script")
+            agent_py.write_text(src.replace("MAX_REPAIRS = 2\n", f"MAX_REPAIRS = {args.seed_max_repairs}\n"))
     proxy.start()
     try:
         res = evaluate(make_sandbox(cfg.sandbox, cfg.docker_image), run / "agent", "headroom", ids,
@@ -131,6 +139,8 @@ def main() -> None:
     calls = [json.loads(ln) for ln in ledger_path.read_text().splitlines()
              if ln.strip()][n_lines_before:]
     out = {"task_pool": cfg.task_pool, "worker": cfg.models.worker,
+           "seed_max_repairs": args.seed_max_repairs if args.seed_max_repairs is not None else 2,
+           "worker_calls_per_task": cfg.caps.worker_calls_per_task,
            "worker_thinking": cfg.models.worker_thinking, "worker_effort": cfg.models.worker_effort,
            "test_timeout_s": cfg.caps.test_timeout_s, "task_ids": ids,
            **summarise_pilot(res.scores, tasks, ids, calls)}

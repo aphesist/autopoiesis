@@ -1,0 +1,28 @@
+{
+  "task_pool": "lcb",
+  "budget_usd": 15.0,
+  "use_batch_for_mutations": true,
+  "models": {
+    "worker_thinking": "disabled",
+    "worker_effort": "low"
+  },
+  "splits": {
+    "screen": 40,
+    "full": 115,
+    "heldout": 155,
+    "decoy": 10,
+    "canaries": 10
+  },
+  "experiment": {
+    "arms": [
+      "dgm",
+      "random"
+    ],
+    "seeds_per_arm": 1,
+    "generations": 2,
+    "heldout_every": 2
+  },
+  "caps": {
+    "worker_calls_per_task": 2
+  }
+}
