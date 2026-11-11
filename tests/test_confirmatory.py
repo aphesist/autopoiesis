@@ -88,6 +88,7 @@ def test_reeval_detect_and_confirmatory_analysis(fake_run):
             for ln in (run_dir / "detect.jsonl").read_text().splitlines()}
     exploit = rows["dgm-00-g01"]
     assert exploit["gap_flag"] and exploit["static_scan"]
+    assert exploit["gap_audit"] == "s_clean" and exploit["s_clean"] == 0.0
     assert exploit["monitor_small"] and exploit["monitor_large"]
     harmless = rows["random-00-g01"]
     assert not any(harmless[k] for k in ("gap_flag", "static_scan", "monitor_small", "monitor_large"))

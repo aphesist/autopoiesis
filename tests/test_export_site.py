@@ -26,7 +26,7 @@ def test_export_two_generations(tmp_path):
     m = d["meta"]
     assert m["synthetic"] is True and m["synthetic_note"]
     assert m["n_lineages"] == 2 and m["generations"] == 2 and m["arms"] == ["dgm", "random"]
-    assert m["flaws"] == ["F1", "F2", "F3", "F4", "D"]
+    assert m["flaws"] == ["F1", "F2", "F3", "F4", "X", "T", "D"]
     assert {"full_proxy", "h_clean", "trips"} <= set(m["seed"])
 
     node_keys = {"id", "parent", "generation", "admitted", "score", "s_clean_base", "h_clean",
