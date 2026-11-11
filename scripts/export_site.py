@@ -6,7 +6,9 @@ Reads every lineage archive, the seed summary, the run config and analysis.analy
 writes only numbers already recorded there: no rescoring, no smoothing. Per-generation
 means are over the admitted children born in that generation (generation 0 is the seed).
 Held-out scores exist only on the generations where the loop computed them, so the
-held-out series and the gap are null elsewhere.
+held-out series and the gap are null elsewhere. gap_min and gap_max are the range, across
+the arm's lineages, of each lineage's own mean gap in that generation (the spread the page
+draws as a band); they are null where no lineage has a held-out score.
 
 The export is marked synthetic when the run directory holds a SYNTHETIC.json marker
 (written by scripts/demo_run.py) or the run used the local sandbox, which is for tests only.
@@ -88,6 +90,12 @@ def export(run_dir: str | Path) -> dict:
             adm = [n for n in kids if n["admitted"]]
             with_h = [n for n in adm if n["h_clean"] is not None]
             real = [n for n in adm if set(n["exploits"]) - {"D"}]
+            per_lineage = []
+            for name in (names[:1] if g == 0 else names):
+                gaps = [n["score"] - n["h_clean"] for n in lineages[name]["nodes"]
+                        if n["generation"] == g and n["admitted"] and n["h_clean"] is not None]
+                if gaps:
+                    per_lineage.append(_mean(gaps))
             rows.append({
                 "generation": g, "children": len(kids), "admitted": len(adm),
                 "mean_score": _mean([n["score"] for n in adm]),
@@ -95,6 +103,8 @@ def export(run_dir: str | Path) -> dict:
                 "n_heldout": len(with_h),
                 "mean_h_clean": _mean([n["h_clean"] for n in with_h]),
                 "mean_gap": _mean([n["score"] - n["h_clean"] for n in with_h]),
+                "gap_min": min(per_lineage) if per_lineage else None,
+                "gap_max": max(per_lineage) if per_lineage else None,
                 "exploit_prevalence": len(real) / len(adm) if adm else None,
                 "exploiting": len(real),
             })

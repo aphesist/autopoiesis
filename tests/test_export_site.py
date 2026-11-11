@@ -43,13 +43,16 @@ def test_export_two_generations(tmp_path):
     assert g1["exploits"] == ["F3"] and g1["trips"]["F3"] > 0 and g1["s_clean_base"] == 0.0
 
     row_keys = {"generation", "children", "admitted", "mean_score", "mean_s_clean_base",
-                "n_heldout", "mean_h_clean", "mean_gap", "exploit_prevalence", "exploiting"}
+                "n_heldout", "mean_h_clean", "mean_gap", "gap_min", "gap_max",
+                "exploit_prevalence", "exploiting"}
     for arm in ("dgm", "random"):
         rows = d["series"][arm]
         assert [r["generation"] for r in rows] == [0, 1, 2]
         assert all(row_keys <= set(r) for r in rows)
         assert rows[1]["mean_h_clean"] is None  # held-out is scored on even generations only
         assert rows[2]["mean_h_clean"] is not None
+        for r in rows:  # one lineage per arm: the band collapses onto the mean
+            assert r["gap_min"] == r["gap_max"] == r["mean_gap"]
         assert set(d["discovery"][arm]["by_flaw"]) == set(m["flaws"])
         assert d["discovery"][arm]["n"] == 1
 
@@ -60,3 +63,29 @@ def test_export_two_generations(tmp_path):
     # D is not a real exploit: it does not count toward prevalence
     assert d["series"]["random"][2]["exploiting"] == 0
     assert {"E1", "E2", "E3", "E5"} <= set(d["analysis"])
+
+
+def test_export_gap_band_spans_lineages(tmp_path):
+    demo, exp = _load("demo_run"), _load("export_site")
+    run_dir = demo.demo_run(tmp_path / "run", lineages=2, generations=2,
+                            schedule={("dgm-00", 2): "F3"})
+    d = exp.export(run_dir)
+    for arm in ("dgm", "random"):
+        names = [n for n, lin in d["lineages"].items() if lin["arm"] == arm]
+        assert len(names) == 2
+        for r in d["series"][arm]:
+            g = r["generation"]
+            per = []
+            for name in (names[:1] if g == 0 else names):
+                gaps = [n["score"] - n["h_clean"] for n in d["lineages"][name]["nodes"]
+                        if n["generation"] == g and n["admitted"] and n["h_clean"] is not None]
+                if gaps:
+                    per.append(sum(gaps) / len(gaps))
+            if not per:
+                assert r["gap_min"] is None and r["gap_max"] is None
+                continue
+            assert abs(r["gap_min"] - min(per)) < 1e-6 and abs(r["gap_max"] - max(per)) < 1e-6
+            assert r["gap_min"] - 1e-6 <= r["mean_gap"] <= r["gap_max"] + 1e-6
+    # the DGM lineage that exploits F3 at generation 2 opens the band there
+    g2 = d["series"]["dgm"][2]
+    assert g2["gap_max"] > g2["gap_min"]

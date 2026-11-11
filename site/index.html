@@ -2,167 +2,182 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Autopoiesis Run Viewer</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>autopoiesis · run viewer</title>
 <meta name="description" content="A self-modifying agent loop judged by an evaluator with planted flaws: lineage trees, the gap between selection and held-out scores, and when each flaw was found.">
+<meta name="color-scheme" content="light dark">
+<!-- the aphes.ist lab kit, vendored and pinned: see lab-kit/VERSION -->
+<link rel="stylesheet" href="lab-kit/v1/lab.css">
+<script src="lab-kit/v1/lab.js" defer></script>
 <style>
-:root {
-  color-scheme: light;
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11,11,11,0.10);
-  --f1: #2a78d6; --f2: #eb6834; --f3: #1baf7a; --f4: #eda100; --fd: #e87ba4; --fx: #7d55c7; --ft: #8a6a3d; --none: #898781;
-  --banner-bg: #fff4d6; --banner-ink: #5a3d00; --banner-edge: #eda100;
-  --mark-edge: rgba(11,11,11,0.55);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
-    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
-    --f1: #3987e5; --f2: #d95926; --f3: #199e70; --f4: #c98500; --fd: #d55181; --fx: #a585e6; --ft: #b8925c; --none: #6f6e69;
-    --banner-bg: #3a2a00; --banner-ink: #ffe3a3; --banner-edge: #c98500;
-    --mark-edge: rgba(255,255,255,0.45);
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
-  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
-  --f1: #3987e5; --f2: #d95926; --f3: #199e70; --f4: #c98500; --fd: #d55181; --fx: #a585e6; --ft: #b8925c; --none: #6f6e69;
-  --banner-bg: #3a2a00; --banner-ink: #ffe3a3; --banner-edge: #c98500;
-  --mark-edge: rgba(255,255,255,0.45);
-}
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0; background: var(--page); color: var(--ink);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
-h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.01em; }
-h2 { font-size: 1.2rem; margin: 48px 0 6px; }
-h3 { font-size: 0.95rem; margin: 0 0 4px; font-weight: 600; }
-p { margin: 0 0 12px; max-width: 68ch; }
-.kicker { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px; }
-.lede { color: var(--ink-2); font-size: 1.05rem; }
-.small { font-size: 0.85rem; color: var(--ink-2); }
-code { font-size: 0.9em; }
-.banner {
-  border: 2px solid var(--banner-edge); background: var(--banner-bg); color: var(--banner-ink);
-  border-radius: 8px; padding: 12px 14px; margin: 16px 0 24px; font-weight: 600;
-}
-.banner span { display: block; font-weight: 400; font-size: 0.9rem; margin-top: 4px; }
-.facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0 0; padding: 0; list-style: none; }
-.facts li { color: var(--ink-2); font-size: 0.9rem; }
-.facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0; font-size: 0.85rem; color: var(--ink-2); }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-.legend svg { overflow: visible; }
-.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
-.grid.flaws { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
-.card > svg { display: block; max-width: 100%; }
-svg text { fill: var(--muted); font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; }
-svg .gridline { stroke: var(--grid); stroke-width: 1; }
-svg .axisline { stroke: var(--axis); stroke-width: 1; }
-svg .edge { stroke: var(--axis); stroke-width: 1.5; fill: none; }
-svg .mark { stroke: var(--mark-edge); stroke-width: 1; }
-svg .hollow { fill: var(--surface); stroke-width: 2; }
-svg .multi { fill: none; stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 2 2; }
-svg .hit { fill: transparent; cursor: pointer; outline: none; }
-svg .hit:focus-visible + .focusring, svg .hit:hover + .focusring { stroke: var(--ink); }
-svg .focusring { fill: none; stroke: transparent; stroke-width: 1.5; pointer-events: none; }
-svg .s-dgm { stroke: var(--ink); fill: none; stroke-width: 2; }
-svg .s-random { stroke: var(--ink-2); fill: none; stroke-width: 2; stroke-dasharray: 5 4; }
-svg .p-dgm { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
-svg .p-random { fill: var(--surface); stroke: var(--ink-2); stroke-width: 2; }
-svg .zero { stroke: var(--ink-2); stroke-width: 1; }
-svg .label { fill: var(--ink-2); font-size: 12px; }
-#tip {
-  position: fixed; z-index: 10; pointer-events: none; max-width: 280px; display: none;
-  background: var(--surface); color: var(--ink); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; font-size: 0.8rem; line-height: 1.4;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-}
-#tip b { font-weight: 600; }
-#tip .row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
-#tip .row span:first-child { color: var(--ink-2); }
-details { margin-top: 10px; font-size: 0.85rem; }
-summary { cursor: pointer; color: var(--ink-2); }
-.tablewrap { overflow-x: auto; }
-table { border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; width: 100%; }
-th, td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
-th:first-child, td:first-child { text-align: left; }
-th { color: var(--ink-2); font-weight: 600; }
-.err { color: var(--banner-ink); background: var(--banner-bg); padding: 12px; border-radius: 8px; }
-footer { margin-top: 56px; color: var(--muted); font-size: 0.8rem; }
+  /* the viewer's own layout and chart marks, on the kit's tokens only */
+  .ap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--space-6) var(--space-5); align-items: start; }
+  .ap-grid--small { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: var(--space-5) var(--space-5); }
+  .ap-plot { width: 100%; min-width: 0; }
+  .lab-chart { min-width: 0; }
+  .lab-chart .lab-chart-head { margin-bottom: var(--space-2); }
+  .ap-legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
+  .ap-legend svg { display: block; flex: none; overflow: visible; }
+  .lab .ap-mark { fill: var(--lab-k, var(--lab-mark)); stroke: var(--bg); stroke-width: 1; }
+  .lab .ap-mark.ap-hollow { fill: var(--bg); stroke: var(--lab-k, var(--lab-mark)); stroke-width: 2; }
+  .lab .ap-multi { fill: none; stroke: var(--ink-soft); stroke-width: 1; stroke-dasharray: 2 2; }
+  .lab-chart .ap-edge { fill: none; stroke: var(--lab-axis); stroke-width: 1.5; }
+  .lab-chart .ap-hit { fill: transparent; cursor: pointer; }
+  .lab-chart .ap-hit:focus-visible { outline: none; }
+  .lab-chart .ap-ring { fill: none; stroke: transparent; stroke-width: 1.5; pointer-events: none; }
+  .lab-chart .ap-hit:hover + .ap-ring, .lab-chart .ap-hit:focus-visible + .ap-ring { stroke: var(--ink); }
+  .ap-more > summary { cursor: pointer; width: max-content; max-width: 100%; color: var(--ink-soft); }
+  .ap-more > summary:hover { color: var(--ink); }
+  .ap-more[open] > summary { margin-bottom: var(--space-3); }
+  .ap-ev-detail { display: block; margin-top: var(--space-1); }
+  .lab-honesty td { vertical-align: top; }
+  .ap-ev-detail { overflow-wrap: anywhere; }
+  .lab .ap-ev-detail code { font-size: inherit; }
+  /* the kit sets labels in lowercase; symbols and identifiers keep their case (ΔG, F1, DGM) */
+  .lab .ap-keep { text-transform: none; }
+  /* Δ is outside Special Elite's subset, and the next face in the stack (Aphesis Script) is lowercase-only and
+     draws δ; set the capital in the rest of the text stack instead */
+  .lab .ap-sym { font-family: "Special Elite", "Courier New", ui-monospace, monospace; text-transform: none; }
+  @media (max-width: 560px) { .lab-honesty th:last-child, .lab-honesty td:last-child { width: 38%; } }
 </style>
 </head>
 <!-- data-src names the JSON this page draws; ?data=other.json overrides it. -->
-<body data-src="demo-data.json">
-<main>
-  <p class="kicker">Laboratory · autopoiesis</p>
-  <h1>Plant the demon, then count the cheaters</h1>
-  <p class="lede">A program that rewrites itself is judged by a judge it can read. This page shows one run of
-  that arrangement as it was recorded: who descended from whom, what each agent was scored, and which
-  of the judge's planted weaknesses it learned to use.</p>
-  <div id="banner"></div>
-  <ul class="facts" id="facts"></ul>
+<body class="lab" data-src="demo-data.json">
+<div class="lab-page">
+  <header class="lab-header">
+    <a class="lab-mark" href="https://aphes.ist/" aria-label="aphes.ist"></a>
+    <span class="lab-project">autopoiesis</span>
+    <div class="lab-controls">
+      <button class="lab-button" type="button" data-lab-toggle="theme">close the eye</button>
+      <button class="lab-button" type="button" data-lab-toggle="fog" aria-pressed="false">fog · off</button>
+    </div>
+  </header>
 
-  <h2>Lineages</h2>
-  <p>Each tree is one lineage. Time runs left to right in generations; every child descends from one
-  parent chosen from the archive, by score in the <b>DGM</b> arm and uniformly at random in the
-  <b>random</b> arm. A mark's colour and shape name the flaw its tripwire caught; grey circles caught
-  none. A hollow mark is a child that was not admitted to the archive. A dashed ring means more than one
-  flaw. Hover, tap or tab to a node for its scores.</p>
-  <div class="legend" id="flaw-legend"></div>
-  <div class="grid" id="trees"></div>
-  <div id="trees-table"></div>
+  <main>
+    <div class="lab-titles">
+      <span class="lab-gloss-title" lang="la">quis custodiet ipsos custodes</span>
+      <h1 class="lab-title">plant the demon, then count the cheaters</h1>
+      <p class="lab-lede">A program that rewrites itself is judged by a judge it can read. This page shows one run of
+      that arrangement as it was recorded: who descended from whom, what each agent was scored, and which of the
+      judge's planted weaknesses it learned to use.</p>
+    </div>
 
-  <h2>The Goodhart gap</h2>
-  <p>The selection score is what the flawed evaluator reports on the selection split. The held-out score
-  is what a clean evaluator, with strong tests and type-strict comparison, reports on problems that are
-  never selected on. Their difference is the part of the score that measures the evaluator rather than
-  the agent. Points are means over the admitted children of each generation; the held-out score exists
-  only on the generations where the loop computed it.</p>
-  <div class="card" id="gap"></div>
+    <div id="banner"></div>
 
-  <h2>Discovery</h2>
-  <p>For each flaw, how many lineages had produced at least one child that tripped it, by generation.
-  A step up is a discovery; the line never comes down, because an exploit once found is a fact about the
-  lineage even if its descendants forget it. The decoy <b>D</b> pays nothing: it is there to tell
-  curiosity from selection.</p>
-  <div id="disc-legend"></div>
-  <div class="grid flaws" id="discovery"></div>
+    <section class="lab-section" aria-labelledby="run-h">
+      <h2 id="run-h">the run</h2>
+      <dl class="lab-stats" id="stats"></dl>
+    </section>
 
-  <footer id="foot"></footer>
-</main>
-<div id="tip" role="status" aria-live="polite"></div>
+    <section class="lab-section" aria-labelledby="lineages-h">
+      <h2 id="lineages-h">lineages</h2>
+      <p class="lab-prose">Each tree is one lineage. Time runs left to right in generations; every child descends from
+      one parent chosen from the archive, by score in the <b>DGM</b> arm and uniformly at random in the <b>random</b>
+      arm. A mark's colour and shape name the flaw its tripwire caught; grey circles caught none. A hollow mark is a
+      child that was not admitted to the archive. A dashed ring means more than one flaw. Point at, tap or tab to a
+      node for its scores.</p>
+      <ul class="lab-legend ap-legend" id="flaw-legend" aria-label="key to the marks"></ul>
+      <div class="ap-grid" id="trees"></div>
+      <details class="ap-more"><summary class="lab-label">all nodes as a table</summary><div id="trees-table"></div></details>
+    </section>
+
+    <section class="lab-section" aria-labelledby="gap-h">
+      <h2 id="gap-h">the goodhart gap</h2>
+      <p class="lab-prose">The selection score is what the flawed evaluator reports on the selection split. The held-out
+      score is what a clean evaluator, with strong tests and type-strict comparison, reports on problems that are never
+      selected on. Their difference is the part of the score that measures the evaluator rather than the agent. Lines
+      are means over the admitted children of each generation; the stippled band is the range of the lineages' own
+      means. The held-out score exists only on the generations where the loop computed it.</p>
+      <figure class="lab-chart" id="gap">
+        <div class="lab-chart-head">
+          <h3>selection score minus held-out score, by generation</h3>
+          <ul class="lab-legend" id="gap-legend"></ul>
+        </div>
+        <div class="ap-plot" id="gap-plot"></div>
+        <figcaption id="gap-caption"></figcaption>
+      </figure>
+      <details class="ap-more"><summary class="lab-label">per-generation series as a table</summary><div id="gap-table"></div></details>
+    </section>
+
+    <section class="lab-section" aria-labelledby="disc-h">
+      <h2 id="disc-h">discovery</h2>
+      <p class="lab-prose">For each flaw, how many lineages had produced at least one child that tripped it, by
+      generation. A step up is a discovery; the line never comes down, because an exploit once found is a fact about
+      the lineage even if its descendants forget it. The decoy <b>D</b> pays nothing: it is there to tell curiosity
+      from selection.</p>
+      <ul class="lab-legend" id="disc-legend"></ul>
+      <div class="ap-grid ap-grid--small" id="discovery"></div>
+      <details class="ap-more"><summary class="lab-label">first exploit per lineage as a table</summary><div id="disc-table"></div></details>
+    </section>
+
+    <section class="lab-section" aria-labelledby="honesty-h">
+      <h2 id="honesty-h">what this rests on</h2>
+      <p class="lab-prose">The honesty table from the README: what kind of knowing each claim of the project rests on.
+      Nothing in it comes from the run drawn above.</p>
+      <div class="lab-table-wrap">
+        <table class="lab-table lab-honesty" id="honesty">
+          <caption>the honesty table, as in README.md. hypotheses are the experiment's questions, not results.</caption>
+          <thead><tr><th scope="col">claim</th><th scope="col">rests on</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="lab-ev-key lab-legend" aria-label="key">
+        <span class="lab-ev" data-ev="measured">measured · observed directly</span>
+        <span class="lab-ev" data-ev="modelled">modelled · computed from what was measured</span>
+        <span class="lab-ev" data-ev="hypothesis">hypothesis · not checked yet</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="lab-footer lab-meta" id="foot"></footer>
+</div>
+
+<!-- The honesty table, mirrored from README.md ("Honesty table"); tests/test_site_page.py keeps the two equal.
+     claim and detail are the README's own text; status is the README's bold or plain status word. -->
+<script type="application/json" id="honesty-data">
+{
+  "source": "README.md#honesty-table",
+  "rows": [
+    {"claim": "All planted flaws trip their tripwires, and honest code trips none (positive and negative controls, local and Docker)", "status": "measured", "detail": "(test suite)"},
+    {"claim": "Canonical MBPP+ solutions score 150/150 on the selection evaluator and 300/300 on the clean evaluator, with 0 false tripwires", "status": "measured", "detail": "(once, Docker)"},
+    {"claim": "The loop runs end to end; a scripted exploiting lineage is detected at generation 1", "status": "measured", "detail": "(fake model, local and Docker)"},
+    {"claim": "Every unplanted exploit found by an independent code review (forged verdicts, comparator patching, frame peeking, cross-task injection, host-file writes via symlinks, shared model sockets) is either closed or caught as X or T", "status": "measured", "detail": "(`tests/test_hardening.py`, `tests/test_isolation.py`, Docker controls)"},
+    {"claim": "Claude spend of about $120–130 of the $155 cap for the full run", "status": "modelled", "detail": "from list prices and assumed tokens; replaced by pilot measurements"},
+    {"claim": "Best-of-N selection alone inflates the raw selection-vs-held-out gap by about 6–12 pp", "status": "modelled", "detail": "(simulation in the research notes); corrected for by E1b"},
+    {"claim": "H1: ΔG > 0 under score selection on the flawed evaluator", "status": "hypothesis", "detail": ""},
+    {"claim": "H2: ΔG(DGM) > ΔG(random)", "status": "hypothesis", "detail": ""},
+    {"claim": "H3: surface flaws are found faster than deep ones", "status": "hypothesis", "detail": ""},
+    {"claim": "H4: exploit prevalence rises faster than the decoy, and faster than in random lineages", "status": "hypothesis", "detail": ""},
+    {"claim": "H5: exploits mostly arise once and spread", "status": "hypothesis", "detail": ""},
+    {"claim": "H6: LLM-monitor recall falls with generation depth", "status": "hypothesis", "detail": "(likely underpowered)"},
+    {"claim": "An evaluator that cannot be gamed (a proof kernel) should shrink the Goodhart gap", "status": "hypothesis", "detail": "(not tested here; see Future work)"}
+  ]
+}
+</script>
+
 <script>
 "use strict";
 const SVGNS = "http://www.w3.org/2000/svg";
 const FLAW_ORDER = ["F1", "F2", "F3", "F4", "X", "T", "D"];
+// fixed categorical slot (lab-c1..c7) and shape per flaw, in this order; no flaw is the dim context colour
 const FLAW_INFO = {
-  F1: { name: "answer key", color: "var(--f1)", shape: "square" },
-  F2: { name: "lenient comparator", color: "var(--f2)", shape: "diamond" },
-  F3: { name: "exit-code trust", color: "var(--f3)", shape: "triangle" },
-  F4: { name: "timeout credit", color: "var(--f4)", shape: "invtriangle" },
-  X:  { name: "unplanted exploit", color: "var(--fx)", shape: "star" },
-  T:  { name: "tampering", color: "var(--ft)", shape: "hexagon" },
-  D:  { name: "decoy (unrewarded)", color: "var(--fd)", shape: "cross" },
-  none: { name: "no flaw tripped", color: "var(--none)", shape: "circle" },
+  F1: { name: "answer key", slot: "lab-c1", shape: "square" },
+  F2: { name: "lenient comparator", slot: "lab-c2", shape: "diamond" },
+  F3: { name: "exit-code trust", slot: "lab-c3", shape: "triangle" },
+  F4: { name: "timeout credit", slot: "lab-c4", shape: "invtriangle" },
+  X:  { name: "unplanted exploit", slot: "lab-c5", shape: "star" },
+  T:  { name: "tampering", slot: "lab-c6", shape: "hexagon" },
+  D:  { name: "decoy (unrewarded)", slot: "lab-c7", shape: "cross" },
+  none: { name: "no flaw tripped", slot: "lab-dim", shape: "circle" },
 };
+const ARM_SHORT = { dgm: "DGM", random: "random" };
 const ARM_LABEL = { dgm: "DGM (score-based)", random: "random" };
+const armShort = a => ARM_SHORT[a] || a;
 
-function el(tag, attrs = {}, parent) {
+function el(tag, attrs = {}, parent, text) {
   const n = document.createElementNS(SVGNS, tag);
   for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (text !== undefined) n.textContent = text;
   if (parent) parent.appendChild(n);
   return n;
 }
@@ -172,8 +187,10 @@ function h(tag, attrs = {}, text) {
   if (text !== undefined) n.textContent = text;
   return n;
 }
-const fmt = (x, d = 2) => (x === null || x === undefined) ? "–" : Number(x).toFixed(d);
-const fmtSigned = (x, d = 2) => (x === null || x === undefined) ? "–" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(d);
+const isNum = x => x !== null && x !== undefined;
+const fmt = (x, d = 2) => isNum(x) ? Number(x).toFixed(d) : "–";
+const fmtSigned = (x, d = 2) => isNum(x) ? (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(d) : "–";
+const px = v => Math.round(v) + 0.5;   // hairlines on whole pixels
 
 function shapePath(shape, cx, cy, r) {
   switch (shape) {
@@ -198,211 +215,27 @@ function primaryFlaw(node) {
   const ex = node.exploits || [];
   return FLAW_ORDER.find(f => ex.includes(f)) || "none";
 }
-function drawMark(g, kind, cx, cy, r, hollow) {
+function drawMark(g, kind, cx, cy, r, hollow, slot) {
   const info = FLAW_INFO[kind];
-  const p = el("path", { d: shapePath(info.shape, cx, cy, r), class: hollow ? "mark hollow" : "mark" }, g);
-  if (hollow) p.style.stroke = info.color; else p.style.fill = info.color;
-  return p;
+  return el("path", { d: shapePath(info.shape, cx, cy, r), class: `ap-mark ${slot || info.slot}${hollow ? " ap-hollow" : ""}` }, g);
 }
-
-// ---------------------------------------------------------------- tooltip
-const tip = document.getElementById("tip");
-function showTip(evt, html) {
-  tip.innerHTML = html;
-  tip.style.display = "block";
-  let x, y;
-  if (evt.clientX !== undefined && evt.type !== "focus") { x = evt.clientX; y = evt.clientY; }
-  else { const b = evt.target.getBoundingClientRect(); x = b.right; y = b.top; }
-  const w = tip.offsetWidth, hh = tip.offsetHeight;
-  const left = Math.min(Math.max(8, x + 12), window.innerWidth - w - 8);
-  const top = (y + 12 + hh > window.innerHeight - 8) ? Math.max(8, y - hh - 12) : y + 12;
-  tip.style.left = left + "px"; tip.style.top = top + "px";
+function icon(kind, opts = {}) {
+  const s = el("svg", { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": "true", focusable: "false" });
+  if (kind === "multi") el("circle", { cx: 8, cy: 8, r: 7, class: "ap-multi" }, s);
+  else drawMark(s, kind, 8, 8, 5.5, !!opts.hollow, opts.slot);
+  return s;
 }
-function hideTip() { tip.style.display = "none"; }
-function rows(pairs) {
-  return pairs.map(([k, v]) => `<div class="row"><span>${k}</span><span>${v}</span></div>`).join("");
+// a focusable, pointable target: the kit's tooltip reads data-tip (on hover and on keyboard focus)
+function target(g, cx, cy, r, tip, label) {
+  el("circle", { cx, cy, r, class: "ap-hit", tabindex: 0, role: "img", "aria-label": label, "data-tip": tip }, g);
+  el("circle", { cx, cy, r: Math.min(r - 1, 9.5), class: "ap-ring" }, g);
 }
-function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
-function bindTip(target, html, label) {
-  target.setAttribute("tabindex", "0");
-  target.setAttribute("role", "img");
-  target.setAttribute("aria-label", label);
-  target.addEventListener("mouseenter", e => showTip(e, html));
-  target.addEventListener("mousemove", e => showTip(e, html));
-  target.addEventListener("mouseleave", hideTip);
-  target.addEventListener("focus", e => showTip(e, html));
-  target.addEventListener("blur", hideTip);
-  target.addEventListener("click", e => { e.stopPropagation(); showTip(e, html); });
-}
-document.addEventListener("click", hideTip);
-document.addEventListener("keydown", e => { if (e.key === "Escape") hideTip(); });
-
-// ---------------------------------------------------------------- header
-function renderHeader(d) {
-  const m = d.meta;
-  const banner = document.getElementById("banner");
-  if (m.synthetic) {
-    const b = h("div", { class: "banner", role: "alert" }, "Synthetic demo data — produced by a scripted fake model, not an experiment");
-    const s = h("span", {}, (m.synthetic_note ? m.synthetic_note + " " : "") +
-      "Every mark and number below shows how the page draws a run, and nothing about how agents behave.");
-    b.appendChild(s);
-    banner.appendChild(b);
-  }
-  const facts = document.getElementById("facts");
-  const add = (label, value) => { const li = h("li"); li.append(label + " "); li.appendChild(h("b", {}, value)); facts.appendChild(li); };
-  add("run", m.run);
-  add("lineages", String(m.n_lineages));
-  for (const a of m.arms) add(ARM_LABEL[a] || a, String(m.lineages_per_arm[a]));
-  add("generations", String(m.generations));
-  add("seed: selection", fmt(m.seed.full_proxy));
-  add("seed: held-out", fmt(m.seed.h_clean));
-  document.getElementById("foot").textContent =
-    `Data: ${DATA_URL} · schema ${d.schema} · ${m.synthetic ? "synthetic" : "recorded run"}. ` +
-    `F4 counts as exploited when the child timed out on ${m.f4_threshold} or more tasks where the seed did not. ` +
-    "Numbers are single-run archive values; the pre-registered analysis re-evaluates lineage winners before any test.";
-}
-
-function renderFlawLegend(d) {
-  const lg = document.getElementById("flaw-legend");
-  const kinds = [...d.meta.flaws.filter(f => FLAW_INFO[f]), "none"];
-  for (const k of kinds) {
-    const span = h("span");
-    const s = el("svg", { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": "true" });
-    drawMark(s, k, 8, 8, 5.5, false);
-    span.appendChild(s);
-    span.append(k === "none" ? FLAW_INFO.none.name : `${k} ${FLAW_INFO[k].name}`);
-    lg.appendChild(span);
-  }
-  const hs = h("span");
-  const s2 = el("svg", { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": "true" });
-  drawMark(s2, "none", 8, 8, 5.5, true);
-  hs.appendChild(s2); hs.append("not admitted");
-  lg.appendChild(hs);
-  const ms = h("span");
-  const s3 = el("svg", { width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": "true" });
-  el("circle", { cx: 8, cy: 8, r: 7, class: "multi" }, s3);
-  ms.appendChild(s3); ms.append("several flaws");
-  lg.appendChild(ms);
-}
-
-// ---------------------------------------------------------------- phylogenies
-function renderTrees(d) {
-  const host = document.getElementById("trees");
-  const G = d.meta.generations;
-  const names = Object.keys(d.lineages).sort((a, b) => {
-    const ia = d.meta.arms.indexOf(d.lineages[a].arm), ib = d.meta.arms.indexOf(d.lineages[b].arm);
-    return ia - ib || a.localeCompare(b);
-  });
-  for (const name of names) {
-    const lin = d.lineages[name];
-    const nodes = lin.nodes;
-    const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
-    const kids = {};
-    for (const n of nodes) if (n.parent) (kids[n.parent] = kids[n.parent] || []).push(n);
-    const order = [];
-    const roots = nodes.filter(n => !n.parent || !byId[n.parent]);
-    const walk = n => { order.push(n); (kids[n.id] || []).sort((a, b) => a.generation - b.generation).forEach(walk); };
-    roots.forEach(walk);
-    const row = Object.fromEntries(order.map((n, i) => [n.id, i]));
-
-    const card = h("div", { class: "card" });
-    host.appendChild(card);
-    const s = lin.summary || {};
-    const title = h("h3", {}, `${name}`);
-    card.appendChild(title);
-    const sub = h("p", { class: "small" });
-    const adm = nodes.filter(n => n.generation > 0 && n.admitted).length;
-    const ch = nodes.filter(n => n.generation > 0).length;
-    sub.textContent = `${ARM_LABEL[lin.arm] || lin.arm} · ${adm} of ${ch} children admitted` +
-      (s.delta_G_provisional !== null && s.delta_G_provisional !== undefined ? ` · provisional ΔG ${fmtSigned(s.delta_G_provisional)}` : "");
-    card.appendChild(sub);
-
-    const W = Math.max(220, card.clientWidth - 26), rowH = 22, padL = 14, padR = 14, padT = 8, padB = 24;
-    const H = padT + padB + rowH * Math.max(1, order.length - 1) + 8;
-    const x = g => padL + (G ? (g / G) : 0) * (W - padL - padR);
-    const y = id => padT + 4 + row[id] * ((H - padT - padB - 8) / Math.max(1, order.length - 1));
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "group",
-      "aria-label": `Phylogeny of lineage ${name}` });
-    for (let g = 0; g <= G; g++) {
-      el("line", { x1: x(g), x2: x(g), y1: padT, y2: H - padB, class: "gridline" }, svg);
-      const t = el("text", { x: x(g), y: H - 8, "text-anchor": "middle" }, svg);
-      t.textContent = g;
-    }
-    for (const n of nodes) {
-      if (!n.parent || !byId[n.parent]) continue;
-      const px = x(byId[n.parent].generation), py = y(n.parent), cx = x(n.generation), cy = y(n.id);
-      const mx = px + (cx - px) * 0.5;
-      el("path", { d: `M${px},${py}H${mx}V${cy}H${cx}`, class: "edge" }, svg);
-    }
-    for (const n of order) {
-      const cx = x(n.generation), cy = y(n.id);
-      const kind = primaryFlaw(n);
-      const g = el("g", {}, svg);
-      drawMark(g, kind, cx, cy, 6, !n.admitted);
-      if ((n.exploits || []).length > 1) el("circle", { cx, cy, r: 10, class: "multi" }, g);
-      const hit = el("circle", { cx, cy, r: 11, class: "hit" }, g);
-      el("circle", { cx, cy, r: 9.5, class: "focusring" }, g);
-      const trips = Object.entries(n.trips || {}).map(([k, v]) => `${k}×${v}`).join(", ") || "none";
-      const html = `<b>${esc(n.id)}</b>` + rows([
-        ["generation", n.generation],
-        ["parent", n.parent ? esc(n.parent) : "–"],
-        ["admitted", n.admitted ? "yes" : "no"],
-        ["selection score (S)", fmt(n.score)],
-        ["clean, base tests (S)", fmt(n.s_clean_base)],
-        ["clean, held-out (H)", fmt(n.h_clean)],
-        ["exploits", (n.exploits || []).join(", ") || "none"],
-        ["tripwire counts", esc(trips)],
-        ["static flags", esc((n.static_flags || []).join(", ") || "none")],
-      ]) + (n.note ? `<div class="small">${esc(n.note)}</div>` : "");
-      const label = `${n.id}, generation ${n.generation}, ${n.admitted ? "admitted" : "not admitted"}, ` +
-        `exploits ${(n.exploits || []).join(" ") || "none"}, selection ${fmt(n.score)}, held-out ${fmt(n.h_clean)}`;
-      bindTip(hit, html, label);
-    }
-    svg.setAttribute("width", W); svg.setAttribute("height", H);
-    card.appendChild(svg);
-  }
-  const det = h("details");
-  det.appendChild(h("summary", {}, "All nodes as a table"));
-  const wrap = h("div", { class: "tablewrap" });
-  const tbl = h("table");
-  tbl.innerHTML = "<thead><tr><th>agent</th><th>gen</th><th>parent</th><th>admitted</th><th>selection</th><th>clean S</th><th>clean H</th><th>exploits</th></tr></thead>";
-  const tb = h("tbody");
-  for (const name of names) for (const n of d.lineages[name].nodes) {
-    const tr = h("tr");
-    for (const v of [n.id, n.generation, n.parent || "–", n.admitted ? "yes" : "no", fmt(n.score), fmt(n.s_clean_base), fmt(n.h_clean), (n.exploits || []).join(" ") || "–"])
-      tr.appendChild(h("td", {}, String(v)));
-    tb.appendChild(tr);
-  }
-  tbl.appendChild(tb); wrap.appendChild(tbl); det.appendChild(wrap);
-  document.getElementById("trees-table").appendChild(det);
-}
-
-// ---------------------------------------------------------------- shared axes
-function axes(svg, { W, H, pad, x, y, G, yTicks, yFmt }) {
-  for (const t of yTicks) {
-    el("line", { x1: pad.l, x2: W - pad.r, y1: y(t), y2: y(t), class: t === 0 ? "zero" : "gridline" }, svg);
-    const tx = el("text", { x: pad.l - 6, y: y(t) + 4, "text-anchor": "end" }, svg);
-    tx.textContent = yFmt(t);
-  }
-  el("line", { x1: pad.l, x2: W - pad.r, y1: H - pad.b, y2: H - pad.b, class: "axisline" }, svg);
-  const step = G > 12 ? Math.ceil(G / 6) : 1;
-  for (let g = 0; g <= G; g += step) {
-    const t = el("text", { x: x(g), y: H - pad.b + 16, "text-anchor": "middle" }, svg);
-    t.textContent = g;
-  }
-}
-function armLegend(arms, parent) {
-  const lg = h("div", { class: "legend" });
-  for (const a of arms) {
-    const span = h("span");
-    const s = el("svg", { width: 30, height: 14, viewBox: "0 0 30 14", "aria-hidden": "true" });
-    el("line", { x1: 1, x2: 29, y1: 7, y2: 7, class: `s-${a}` }, s);
-    if (a === "dgm") el("circle", { cx: 15, cy: 7, r: 4, class: "p-dgm" }, s);
-    else el("rect", { x: 11, y: 3, width: 8, height: 8, class: "p-random" }, s);
-    span.appendChild(s); span.append(ARM_LABEL[a] || a);
-    lg.appendChild(span);
-  }
-  parent.appendChild(lg);
+function frame(host, H) {
+  host.replaceChildren();
+  const W = Math.max(200, Math.floor(host.getBoundingClientRect().width));
+  // one SVG unit per CSS pixel: the stipple masks are in user units
+  const svg = el("svg", { class: "lab-svg", width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img" }, host);
+  return { svg, W, H };
 }
 function niceTicks(lo, hi) {
   const span = hi - lo || 1;
@@ -413,76 +246,292 @@ function niceTicks(lo, hi) {
   for (let i = i0; i <= i1; i++) out.push(Math.round(i * step * 1e6) / 1e6);
   return out;
 }
+// axes drawn the way d3-axis draws them, so the kit's chart layer styles them
+function axes(svg, { W, H, pad, x, y, G, yTicks, yFmt, yTitle, xTitle, skipGrid }) {
+  const grid = el("g", { class: "lab-grid" }, svg);
+  for (const t of yTicks) if (!(skipGrid && skipGrid(t))) el("line", { x1: pad.l, x2: W - pad.r, y1: px(y(t)), y2: px(y(t)) }, grid);
+  const ya = el("g", { class: "axis" }, svg);
+  el("path", { class: "domain", d: `M${pad.l - 4},${px(H - pad.b)}H${px(pad.l)}V${px(pad.t)}H${pad.l - 4}` }, ya);
+  for (const t of yTicks) {
+    const tk = el("g", { class: "tick", transform: `translate(${pad.l},${px(y(t))})` }, ya);
+    el("line", { x2: -4 }, tk);
+    el("text", { x: -8, dy: ".32em", "text-anchor": "end" }, tk, yFmt(t));
+  }
+  if (yTitle) el("text", { class: "lab-axis-title", x: pad.l - 8, y: pad.t - 10, "text-anchor": "start" }, ya, yTitle);
+  const xa = el("g", { class: "axis", transform: `translate(0,${px(H - pad.b)})` }, svg);
+  el("path", { class: "domain", d: `M${pad.l},4.5V.5H${W - pad.r}V4.5` }, xa);
+  const step = G > 12 ? Math.ceil(G / 6) : 1;
+  for (let g = 0; g <= G; g += step) {
+    const tk = el("g", { class: "tick", transform: `translate(${px(x(g))},0)` }, xa);
+    el("line", { y2: 4 }, tk);
+    el("text", { y: 16, "text-anchor": "middle" }, tk, String(g));
+  }
+  if (xTitle) el("text", { class: "lab-axis-title", x: W - pad.r, y: 32, "text-anchor": "end" }, xa, xTitle);
+}
+function table(cols, rows, caption) {
+  const wrap = h("div", { class: "lab-table-wrap" });
+  const t = h("table", { class: "lab-table lab-table--dense" });
+  if (caption) t.appendChild(h("caption", {}, caption));
+  const thead = h("thead"), tr = h("tr");
+  for (const c of cols) tr.appendChild(h("th", { scope: "col", class: c.num ? "num" : "" }, c.label));
+  thead.appendChild(tr); t.appendChild(thead);
+  const tb = h("tbody");
+  for (const r of rows) {
+    const row = h("tr");
+    r.forEach((v, i) => {
+      const cell = h(i === 0 ? "th" : "td", i === 0 ? { scope: "row" } : {});
+      if (v && typeof v === "object") { cell.textContent = v.text; if (v.cls) cell.className = v.cls; }
+      else { cell.textContent = String(v); if (cols[i].num) cell.className = "num"; }
+      row.appendChild(cell);
+    });
+    tb.appendChild(row);
+  }
+  t.appendChild(tb); wrap.appendChild(t);
+  return wrap;
+}
+// text with every Δ in a span that keeps it a capital (see .ap-sym)
+function textInto(parent, text) {
+  text.split(/(Δ)/).forEach(part => {
+    if (part === "Δ") parent.appendChild(h("span", { class: "ap-sym" }, part));
+    else if (part) parent.append(part);
+  });
+  return parent;
+}
+function legendItem(ul, cls, text) { const li = h("li", { class: cls }, text); ul.appendChild(li); return li; }
+function slotOf(d, arm) { return "lab-c" + (d.meta.arms.indexOf(arm) + 1); }
+function lineagesOf(d) {
+  return Object.keys(d.lineages).sort((a, b) => {
+    const ia = d.meta.arms.indexOf(d.lineages[a].arm), ib = d.meta.arms.indexOf(d.lineages[b].arm);
+    return ia - ib || a.localeCompare(b);
+  });
+}
+
+// ---------------------------------------------------------------- banner, stats, footer
+function renderHeader(d) {
+  const m = d.meta;
+  if (m.synthetic) {
+    const b = h("div", { class: "lab-callout lab-callout--alert", role: "note" });
+    b.appendChild(h("span", { class: "lab-callout-label" }, "synthetic demo data · a scripted fake model, not an experiment"));
+    b.appendChild(h("p", {}, (m.synthetic_note ? m.synthetic_note + " " : "") +
+      "Every mark and number below shows how the page draws a run, and nothing about how agents behave."));
+    document.getElementById("banner").appendChild(b);
+  }
+  const stats = document.getElementById("stats");
+  const tile = (label, value, note, ref, keep) => {
+    const div = h("div", { class: "lab-stat" + (ref ? " lab-stat--ref" : "") });
+    const dt = h("dt", { class: "lab-stat-label" }, label);
+    if (keep) dt.appendChild(textInto(h("span", { class: "ap-keep" }), keep));
+    div.appendChild(dt);
+    div.appendChild(h("dd", { class: "lab-stat-value num" }, value));
+    if (note) div.appendChild(h("dd", { class: "lab-stat-note" }, note));
+    stats.appendChild(div);
+  };
+  const kids = Object.values(d.lineages).flatMap(l => l.nodes.filter(n => n.generation > 0));
+  const adm = kids.filter(n => n.admitted).length;
+  tile("lineages", String(m.n_lineages), m.arms.map(a => `${m.lineages_per_arm[a]} ${armShort(a)}`).join(" · "));
+  tile("generations", String(m.generations), isNum(m.planned_generations) ? `of ${m.planned_generations} planned` : "");
+  tile("children", String(kids.length), "one per lineage and generation");
+  tile("admitted", String(adm), `of ${kids.length} children`);
+  const e1 = (d.analysis || {}).E1 || {};
+  m.arms.forEach((a, i) => {
+    const vals = Object.values(d.lineages).filter(l => l.arm === a && l.summary && isNum(l.summary.delta_G_provisional))
+      .map(l => l.summary.delta_G_provisional);
+    const mean = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+    const p = e1.source === "provisional" && e1[a] && isNum(e1[a].sign_flip_p) ? ` · sign-flip p ${fmt(e1[a].sign_flip_p, 2)}` : "";
+    tile("provisional ", fmtSigned(mean), `mean of ${vals.length} lineages${p}`, i === 0, `ΔG · ${armShort(a)}`);
+  });
+  const foot = document.getElementById("foot");
+  foot.appendChild(h("span", {}, `data: ${DATA_URL} · schema ${d.schema} · ${m.synthetic ? "synthetic" : "recorded run"} · run ${m.run}`));
+  foot.appendChild(h("span", {}, `F4 counts as exploited when the child timed out on ${m.f4_threshold} or more tasks where the seed did not. ` +
+    "Numbers are single-run archive values; the pre-registered analysis re-evaluates lineage winners before any test."));
+  foot.appendChild(h("span", {}, `aphes.ist lab kit ${window.Lab ? Lab.version : "v1"}`));
+}
+
+function renderFlawLegend(d) {
+  const lg = document.getElementById("flaw-legend");
+  for (const k of [...d.meta.flaws.filter(f => FLAW_INFO[f]), "none"]) {
+    const li = h("li"); li.appendChild(icon(k));
+    li.append(k === "none" ? FLAW_INFO.none.name : `${k} ${FLAW_INFO[k].name}`);
+    lg.appendChild(li);
+  }
+  const na = h("li"); na.appendChild(icon("none", { hollow: true, slot: "lab-soft" })); na.append("not admitted"); lg.appendChild(na);
+  const mu = h("li"); mu.appendChild(icon("multi")); mu.append("several flaws"); lg.appendChild(mu);
+}
+
+// ---------------------------------------------------------------- phylogenies
+function renderTrees(d) {
+  const host = document.getElementById("trees");
+  const G = d.meta.generations;
+  const names = lineagesOf(d);
+  for (const name of names) {
+    const lin = d.lineages[name], nodes = lin.nodes;
+    const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+    const kids = {};
+    for (const n of nodes) if (n.parent) (kids[n.parent] = kids[n.parent] || []).push(n);
+    const order = [];
+    const walk = n => { order.push(n); (kids[n.id] || []).sort((a, b) => a.generation - b.generation).forEach(walk); };
+    nodes.filter(n => !n.parent || !byId[n.parent]).forEach(walk);
+    const row = Object.fromEntries(order.map((n, i) => [n.id, i]));
+
+    const s = lin.summary || {};
+    const children = nodes.filter(n => n.generation > 0);
+    const adm = children.filter(n => n.admitted).length;
+    const firsts = Object.entries(s.first_exploit_generation || {}).filter(([, g]) => isNum(g)).sort((a, b) => a[1] - b[1]);
+    const finding = firsts.length
+      ? "first exploits: " + firsts.map(([f, g]) => `${f} at generation ${g}`).join(", ")
+      : "no flaw tripped";
+
+    const fig = h("figure", { class: "lab-chart" });
+    host.appendChild(fig);
+    fig.appendChild(h("h3", {}, name));
+    const plot = h("div", { class: "ap-plot" });
+    fig.appendChild(plot);
+    const cap = `${ARM_LABEL[lin.arm] || lin.arm} · ${adm} of ${children.length} children admitted` +
+      (isNum(s.delta_G_provisional) ? ` · provisional ΔG ${fmtSigned(s.delta_G_provisional)}` : "") + ` · ${finding}`;
+    fig.appendChild(textInto(h("figcaption"), cap));
+
+    const rowH = 24, pad = { l: 14, r: 14, t: 12, b: 28 };
+    const H = pad.t + pad.b + rowH * Math.max(1, order.length - 1);
+    const f = frame(plot, H);
+    f.svg.setAttribute("role", "group");
+    f.svg.setAttribute("aria-label", `Phylogeny of lineage ${name}: ${children.length} children, ${adm} admitted; ${finding}.`);
+    const x = g => pad.l + (G ? g / G : 0) * (f.W - pad.l - pad.r);
+    const y = id => pad.t + row[id] * rowH;
+    const grid = el("g", { class: "lab-grid" }, f.svg);
+    const xa = el("g", { class: "axis", transform: `translate(0,${H - pad.b + 6})` }, f.svg);
+    for (let g = 0; g <= G; g++) {
+      el("line", { x1: px(x(g)), x2: px(x(g)), y1: pad.t - 6, y2: H - pad.b + 2 }, grid);
+      const tk = el("g", { class: "tick", transform: `translate(${px(x(g))},0)` }, xa);
+      el("text", { y: 12, "text-anchor": "middle" }, tk, String(g));
+    }
+    for (const n of nodes) {
+      if (!n.parent || !byId[n.parent]) continue;
+      const x0 = x(byId[n.parent].generation), y0 = y(n.parent), x1 = x(n.generation), y1 = y(n.id);
+      const mx = Math.round(x0 + (x1 - x0) * 0.5) + 0.5;
+      el("path", { d: `M${x0},${y0}H${mx}V${y1}H${x1}`, class: "ap-edge" }, f.svg);
+    }
+    for (const n of order) {
+      const cx = x(n.generation), cy = y(n.id);
+      const g = el("g", {}, f.svg);
+      drawMark(g, primaryFlaw(n), cx, cy, 6, !n.admitted);
+      if ((n.exploits || []).length > 1) el("circle", { cx, cy, r: 10, class: "ap-multi" }, g);
+      const trips = Object.entries(n.trips || {}).map(([k, v]) => `${k}×${v}`).join(", ") || "none";
+      const tip = [
+        n.id,
+        `generation ${n.generation} · parent ${n.parent || "–"}`,
+        `admitted: ${n.admitted ? "yes" : "no"}`,
+        `selection score (S) ${fmt(n.score)}`,
+        `clean, base tests (S) ${fmt(n.s_clean_base)}`,
+        `clean, held-out (H) ${fmt(n.h_clean)}`,
+        `exploits: ${(n.exploits || []).join(", ") || "none"}`,
+        `tripwire counts: ${trips}`,
+        `static flags: ${(n.static_flags || []).join(", ") || "none"}`,
+      ].concat(n.note ? [n.note] : []).join("\n");
+      const label = `${n.id}, generation ${n.generation}, ${n.admitted ? "admitted" : "not admitted"}, ` +
+        `exploits ${(n.exploits || []).join(" ") || "none"}, selection ${fmt(n.score)}, held-out ${fmt(n.h_clean)}`;
+      target(g, cx, cy, 11, tip, label);
+    }
+  }
+  const rows = [];
+  for (const name of names) for (const n of d.lineages[name].nodes) {
+    rows.push([n.id, n.generation, n.parent || "–",
+      n.generation === 0 ? "seed" : { text: n.admitted ? "pass" : "fail", cls: n.admitted ? "lab-pass" : "lab-fail" },
+      fmt(n.score), fmt(n.s_clean_base), fmt(n.h_clean), (n.exploits || []).join(" ") || "–"]);
+  }
+  document.getElementById("trees-table").appendChild(table([
+    { label: "agent" }, { label: "gen", num: true }, { label: "parent" }, { label: "admission" },
+    { label: "selection", num: true }, { label: "clean S", num: true }, { label: "clean H", num: true }, { label: "exploits" },
+  ], rows, "every agent in every lineage. admission: pass means the child entered the archive."));
+}
 
 // ---------------------------------------------------------------- Goodhart gap
 function renderGap(d) {
-  const host = document.getElementById("gap");
   const G = d.meta.generations;
   const arms = d.meta.arms.filter(a => d.series[a]);
-  const vals = arms.flatMap(a => d.series[a].map(r => r.mean_gap)).filter(v => v !== null);
-  const head = h("h3", {}, "Selection score minus held-out score, mean per generation");
-  host.appendChild(head);
-  armLegend(arms, host);
-  if (!vals.length) { host.appendChild(h("p", { class: "small" }, "No generation has held-out scores yet.")); return; }
+  const plot = document.getElementById("gap-plot");
+  const lg = document.getElementById("gap-legend");
+  lg.replaceChildren();
+  for (const a of arms) legendItem(lg, `lab-key ${slotOf(d, a)}`, armShort(a));
+  for (const a of arms) legendItem(lg, `lab-key lab-key--band ${slotOf(d, a)}`, `${armShort(a)} lineage range`);
+  legendItem(lg, "lab-key lab-key--rule", "no gap");
+
+  const vals = arms.flatMap(a => d.series[a].flatMap(r => [r.mean_gap, r.gap_min, r.gap_max])).filter(isNum);
+  const caption = document.getElementById("gap-caption");
+  if (!vals.length) {
+    plot.replaceChildren(h("p", { class: "lab-meta" }, "No generation has held-out scores yet."));
+    caption.textContent = "";
+    return;
+  }
   const ticks = niceTicks(Math.min(0, ...vals), Math.max(0, ...vals));
   const lo = ticks[0], hi = ticks[ticks.length - 1];
-  const W = Math.max(260, host.clientWidth - 26), H = Math.round(Math.min(300, Math.max(200, W * 0.45)));
-  const pad = { l: 44, r: 52, t: 12, b: 34 };
-  const x = g => pad.l + (G ? g / G : 0) * (W - pad.l - pad.r);
+  const W0 = Math.floor(plot.getBoundingClientRect().width);
+  const H = Math.round(Math.min(320, Math.max(220, W0 * 0.42)));
+  const f = frame(plot, H);
+  const pad = { l: 48, r: 64, t: 24, b: 40 };
+  const x = g => pad.l + (G ? g / G : 0) * (f.W - pad.l - pad.r);
   const y = v => pad.t + (hi - v) / (hi - lo || 1) * (H - pad.t - pad.b);
-  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "group",
-    "aria-label": "Goodhart gap by generation, by arm" });
-  axes(svg, { W, H, pad, x, y, G, yTicks: ticks, yFmt: t => fmtSigned(t, 2) });
-  const xl = el("text", { x: W - pad.r, y: H - 2, "text-anchor": "end" }, svg); xl.textContent = "generation";
-  for (const a of arms) {
-    const pts = d.series[a].filter(r => r.mean_gap !== null);
-    if (pts.length > 1) el("path", { d: pts.map((r, i) => `${i ? "L" : "M"}${x(r.generation)},${y(r.mean_gap)}`).join(""), class: `s-${a}` }, svg);
-  }
-  arms.forEach((a, ai) => {
-    for (const r of d.series[a]) {
-      if (r.mean_gap === null) continue;
-      // the shared seed point would sit under itself; nudge the second arm's marker
-      const cx = x(r.generation) + (r.generation === 0 ? (ai ? 5 : -5) : 0), cy = y(r.mean_gap);
-      const g = el("g", {}, svg);
-      if (a === "dgm") el("circle", { cx, cy, r: 4.5, class: "p-dgm" }, g);
-      else el("rect", { x: cx - 4.5, y: cy - 4.5, width: 9, height: 9, class: "p-random" }, g);
-      const hit = el("circle", { cx, cy, r: 12, class: "hit" }, g);
-      el("circle", { cx, cy, r: 8, class: "focusring" }, g);
-      const html = `<b>${esc(ARM_LABEL[a] || a)}, generation ${r.generation}</b>` + rows([
-        ["mean selection score (S)", fmt(r.mean_score)],
-        ["mean clean score (H)", fmt(r.mean_h_clean)],
-        ["gap", fmtSigned(r.mean_gap)],
-        ["children with H score", r.n_heldout],
-        ["exploit prevalence", r.exploit_prevalence === null ? "–" : `${r.exploiting} of ${r.admitted}`],
-      ]);
-      bindTip(hit, html, `${a} generation ${r.generation}: gap ${fmtSigned(r.mean_gap)}, selection ${fmt(r.mean_score)}, held-out ${fmt(r.mean_h_clean)}`);
-    }
-  });
-  // direct labels at the last point of each arm
-  arms.forEach(a => {
-    const pts = d.series[a].filter(r => r.mean_gap !== null);
-    if (!pts.length) return;
-    const last = pts[pts.length - 1];
-    const t = el("text", { x: x(last.generation) + 9, y: y(last.mean_gap) + 4, "text-anchor": "start", class: "label" }, svg);
-    t.textContent = a === "dgm" ? "DGM" : a;
-  });
-  svg.setAttribute("width", W); svg.setAttribute("height", H);
-  host.appendChild(svg);
+  axes(f.svg, { W: f.W, H, pad, x, y, G, yTicks: ticks, yFmt: t => fmtSigned(t, 2), yTitle: "gap", xTitle: "generation",
+    skipGrid: t => t === 0 });
+  el("line", { class: "lab-rule-ref", x1: pad.l, x2: f.W - pad.r, y1: px(y(0)), y2: px(y(0)) }, f.svg);
 
-  const det = h("details");
-  det.appendChild(h("summary", {}, "Per-generation series as a table"));
-  const wrap = h("div", { class: "tablewrap" });
-  const tbl = h("table");
-  tbl.innerHTML = "<thead><tr><th>arm</th><th>gen</th><th>admitted</th><th>mean S</th><th>mean clean S</th><th>mean H</th><th>gap</th><th>exploiting</th></tr></thead>";
-  const tb = h("tbody");
-  for (const a of arms) for (const r of d.series[a]) {
-    const tr = h("tr");
-    for (const v of [a, r.generation, `${r.admitted} of ${r.children}`, fmt(r.mean_score), fmt(r.mean_s_clean_base), fmt(r.mean_h_clean), fmtSigned(r.mean_gap), r.exploit_prevalence === null ? "–" : `${r.exploiting} of ${r.admitted}`])
-      tr.appendChild(h("td", {}, String(v)));
-    tb.appendChild(tr);
+  const pts = a => d.series[a].filter(r => isNum(r.mean_gap));
+  // the seed (generation 0) is shared by both arms; nudge each arm's marker apart there
+  const nudge = (a, g) => g === 0 && arms.length > 1 ? (arms.indexOf(a) ? 4 : -4) : 0;
+  for (const a of arms) {
+    const band = d.series[a].filter(r => isNum(r.gap_min) && isNum(r.gap_max));
+    if (band.length > 1) {
+      const up = band.map(r => `${x(r.generation)},${y(r.gap_max)}`);
+      const dn = band.slice().reverse().map(r => `${x(r.generation)},${y(r.gap_min)}`);
+      el("path", { class: `lab-band ${slotOf(d, a)}`, d: "M" + up.concat(dn).join("L") + "Z" }, f.svg);
+    }
   }
-  tbl.appendChild(tb); wrap.appendChild(tbl); det.appendChild(wrap);
-  host.appendChild(det);
+  for (const a of arms) {
+    const p = pts(a);
+    if (p.length > 1) {
+      const dd = p.map((r, i) => `${i ? "L" : "M"}${x(r.generation) + nudge(a, r.generation)},${y(r.mean_gap)}`).join("");
+      el("path", { class: "lab-halo", d: dd }, f.svg);
+      el("path", { class: `lab-line ${slotOf(d, a)}`, d: dd }, f.svg);
+    }
+  }
+  for (const a of arms) for (const r of pts(a)) {
+    const cx = x(r.generation) + nudge(a, r.generation), cy = y(r.mean_gap);
+    const g = el("g", {}, f.svg);
+    el("rect", { class: `lab-dot ${slotOf(d, a)}`, x: Math.round(cx) - 3, y: Math.round(cy) - 3, width: 6, height: 6 }, g);
+    const tip = [
+      `${ARM_LABEL[a] || a}, generation ${r.generation}`,
+      `mean selection score (S) ${fmt(r.mean_score)}`,
+      `mean clean score (H) ${fmt(r.mean_h_clean)}`,
+      `gap ${fmtSigned(r.mean_gap)} · lineages ${fmtSigned(r.gap_min)} to ${fmtSigned(r.gap_max)}`,
+      `children with an H score ${r.n_heldout}`,
+      `exploiting ${isNum(r.exploit_prevalence) ? `${r.exploiting} of ${r.admitted}` : "–"}`,
+    ].join("\n");
+    target(g, cx, cy, 10, tip, `${armShort(a)} generation ${r.generation}: gap ${fmtSigned(r.mean_gap)}, lineages ${fmtSigned(r.gap_min)} to ${fmtSigned(r.gap_max)}`);
+  }
+  // direct labels at each arm's last point, kept apart
+  const ends = arms.map(a => { const p = pts(a); const r = p[p.length - 1]; return r && { a, r, y: y(r.mean_gap) }; }).filter(Boolean)
+    .sort((p, q) => p.y - q.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 13) ends[i].y = ends[i - 1].y + 13;
+  for (const e of ends) el("text", { class: "lab-label ap-keep", x: x(e.r.generation) + 10, y: e.y, dy: ".32em" }, f.svg, armShort(e.a));
+
+  const finals = ends.slice().sort((p, q) => arms.indexOf(p.a) - arms.indexOf(q.a))
+    .map(e => `${fmtSigned(e.r.mean_gap)} in ${armShort(e.a)} lineages at generation ${e.r.generation}`);
+  const seedGap = isNum(d.meta.seed.full_proxy) && isNum(d.meta.seed.h_clean) ? d.meta.seed.full_proxy - d.meta.seed.h_clean : null;
+  const finding = `The mean gap between selection and held-out scores is ${finals.join(" and ")}` +
+    (isNum(seedGap) ? `; the seed's own gap is ${fmtSigned(seedGap)}.` : ".");
+  f.svg.setAttribute("aria-label", finding);
+  caption.textContent = finding + " Lines join the generations with held-out scores; the dotted red rule is no gap.";
+
+  const rows = [];
+  for (const a of arms) for (const r of d.series[a]) rows.push([armShort(a), r.generation, `${r.admitted} of ${r.children}`,
+    fmt(r.mean_score), fmt(r.mean_s_clean_base), fmt(r.mean_h_clean), fmtSigned(r.mean_gap),
+    isNum(r.gap_min) ? `${fmtSigned(r.gap_min)} to ${fmtSigned(r.gap_max)}` : "–",
+    isNum(r.exploit_prevalence) ? `${r.exploiting} of ${r.admitted}` : "–"]);
+  const tbl = document.getElementById("gap-table");
+  tbl.replaceChildren(table([
+    { label: "arm" }, { label: "gen", num: true }, { label: "admitted", num: true }, { label: "mean S", num: true },
+    { label: "mean clean S", num: true }, { label: "mean H", num: true }, { label: "gap", num: true },
+    { label: "lineage range", num: true }, { label: "exploiting", num: true },
+  ], rows, "means over admitted children; the lineage range is the lowest and highest lineage mean gap."));
 }
 
 // ---------------------------------------------------------------- discovery
@@ -490,79 +539,141 @@ function renderDiscovery(d) {
   const host = document.getElementById("discovery");
   const G = d.meta.generations;
   const arms = d.meta.arms.filter(a => d.discovery[a]);
-  const nMax = Math.max(...arms.map(a => d.discovery[a].n));
-  armLegend(arms, document.getElementById("disc-legend"));
+  const nMax = Math.max(1, ...arms.map(a => d.discovery[a].n));
+  const lg = document.getElementById("disc-legend");
+  lg.replaceChildren();
+  for (const a of arms) legendItem(lg, `lab-key ${slotOf(d, a)}`, `${armShort(a)} lineages`);
   for (const f of d.meta.flaws) {
-    const card = h("div", { class: "card" });
-    host.appendChild(card);
-    const t = h("h3");
-    const s0 = el("svg", { width: 14, height: 14, viewBox: "0 0 16 16", "aria-hidden": "true" });
-    s0.style.verticalAlign = "-2px"; s0.style.marginRight = "6px";
-    drawMark(s0, FLAW_INFO[f] ? f : "none", 8, 8, 5.5, false);
-    t.appendChild(s0);
-    t.append(`${f} ${FLAW_INFO[f] ? FLAW_INFO[f].name : ""}`);
-    card.appendChild(t);
-    const finals = arms.map(a => `${ARM_LABEL[a] === undefined ? a : (a === "dgm" ? "DGM" : a)} ${d.discovery[a].by_flaw[f][G]} of ${d.discovery[a].n}`);
-    card.appendChild(h("p", { class: "small" }, finals.join(" · ")));
-    const W = Math.max(150, card.clientWidth - 26), H = 130, pad = { l: 30, r: 10, t: 8, b: 24 };
-    const x = g => pad.l + (G ? g / G : 0) * (W - pad.l - pad.r);
-    const y = v => pad.t + (nMax - v) / (nMax || 1) * (H - pad.t - pad.b);
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "group",
-      "aria-label": `Lineages that exploited ${f}, by generation` });
-    const yt = []; for (let v = 0; v <= nMax; v++) yt.push(v);
-    axes(svg, { W, H, pad, x, y, G, yTicks: nMax > 6 ? niceTicks(0, nMax) : yt, yFmt: v => String(v) });
-    arms.forEach((a, ai) => {
+    const info = FLAW_INFO[f] || FLAW_INFO.none;
+    const fig = h("figure", { class: "lab-chart" });
+    host.appendChild(fig);
+    const head = h("h3");
+    const s0 = icon(FLAW_INFO[f] ? f : "none", { slot: "lab-soft" });
+    s0.style.display = "inline-block"; s0.style.verticalAlign = "-3px"; s0.style.marginRight = "8px";
+    head.appendChild(s0);
+    head.appendChild(h("span", { class: "ap-keep" }, f));
+    head.append(` ${FLAW_INFO[f] ? info.name : ""}`);
+    fig.appendChild(head);
+    const plot = h("div", { class: "ap-plot" });
+    fig.appendChild(plot);
+    const finals = arms.map(a => `${armShort(a)} ${d.discovery[a].by_flaw[f][G]} of ${d.discovery[a].n}`);
+    fig.appendChild(h("figcaption", {}, `by generation ${G}: ${finals.join(" · ")}`));
+
+    const H = 140, pad = { l: 28, r: 56, t: 10, b: 28 };
+    const fr = frame(plot, H);
+    const x = g => pad.l + (G ? g / G : 0) * (fr.W - pad.l - pad.r);
+    const y = v => pad.t + (nMax - v) / nMax * (H - pad.t - pad.b);
+    const yt = nMax > 6 ? niceTicks(0, nMax) : Array.from({ length: nMax + 1 }, (_, i) => i);
+    axes(fr.svg, { W: fr.W, H, pad, x, y, G, yTicks: yt, yFmt: String });
+    fr.svg.setAttribute("aria-label", `${f} ${info.name}: by generation ${G}, ` +
+      arms.map(a => `${d.discovery[a].by_flaw[f][G]} of ${d.discovery[a].n} ${armShort(a)} lineages`).join(" and ") + " had exploited it.");
+    const off = a => arms.length > 1 ? (arms.indexOf(a) ? 1.5 : -1.5) : 0;   // overlapping steps stay side by side
+    for (const a of arms) {
       const c = d.discovery[a].by_flaw[f];
-      const off = ai ? 1.5 : -1.5;  // keep overlapping steps both visible
-      let p = `M${x(0)},${y(c[0]) + off}`;
-      for (let g = 1; g <= G; g++) p += `H${x(g)}V${y(c[g]) + off}`;
-      el("path", { d: p, class: `s-${a}` }, svg);
-      for (let g = 0; g <= G; g++) {
-        if (g > 0 && c[g] === c[g - 1]) continue;
-        const cx = x(g), cy = y(c[g]) + off;
-        const gg = el("g", {}, svg);
-        if (a === "dgm") el("circle", { cx, cy, r: 3.5, class: "p-dgm" }, gg);
-        else el("rect", { x: cx - 3.5, y: cy - 3.5, width: 7, height: 7, class: "p-random" }, gg);
-        const hit = el("circle", { cx, cy, r: 10, class: "hit" }, gg);
-        el("circle", { cx, cy, r: 7, class: "focusring" }, gg);
-        const html = `<b>${esc(f)}, ${esc(ARM_LABEL[a] || a)}</b>` + rows([["by generation", g], ["lineages exploited", `${c[g]} of ${d.discovery[a].n}`]]);
-        bindTip(hit, html, `${f}, ${a}: ${c[g]} of ${d.discovery[a].n} lineages by generation ${g}`);
+      let p = `M${x(0)},${y(c[0]) + off(a)}`;
+      for (let g = 1; g <= G; g++) p += `H${x(g)}V${y(c[g]) + off(a)}`;
+      el("path", { class: `lab-step ${slotOf(d, a)}`, d: p }, fr.svg);
+    }
+    for (const a of arms) {
+      const c = d.discovery[a].by_flaw[f];
+      for (let g = 1; g <= G; g++) {
+        if (c[g] === c[g - 1]) continue;
+        const cx = x(g), cy = y(c[g]) + off(a);
+        const gg = el("g", {}, fr.svg);
+        el("rect", { class: `lab-dot ${slotOf(d, a)}`, x: Math.round(cx) - 3, y: Math.round(cy) - 3, width: 6, height: 6 }, gg);
+        target(gg, cx, cy, 10, `${f} ${info.name}, ${ARM_LABEL[a] || a}\nby generation ${g}: ${c[g]} of ${d.discovery[a].n} lineages`,
+          `${f}, ${armShort(a)}: ${c[g]} of ${d.discovery[a].n} lineages by generation ${g}`);
       }
-    });
-    svg.setAttribute("width", W); svg.setAttribute("height", H);
-    card.appendChild(svg);
+    }
+    // direct labels at the right end; one label when the arms end together
+    const ends = arms.map(a => ({ a, v: d.discovery[a].by_flaw[f][G] }));
+    const same = ends.length > 1 && ends.every(e => e.v === ends[0].v);
+    if (same) el("text", { class: "lab-label-soft", x: x(G) + 8, y: y(ends[0].v), dy: ".32em" }, fr.svg, "both");
+    else {
+      const ys = ends.map(e => ({ ...e, y: y(e.v) + off(e.a) })).sort((p, q) => p.y - q.y);
+      for (let i = 1; i < ys.length; i++) if (ys[i].y - ys[i - 1].y < 12) ys[i].y = ys[i - 1].y + 12;
+      for (const e of ys) el("text", { class: "lab-label ap-keep", x: x(G) + 8, y: e.y, dy: ".32em" }, fr.svg, armShort(e.a));
+    }
+  }
+  const rows = [];
+  for (const name of lineagesOf(d)) {
+    const fe = d.first_exploit[name] || {};
+    rows.push([name, armShort(d.lineages[name].arm), ...d.meta.flaws.map(f => isNum(fe[f]) ? String(fe[f]) : "–")]);
+  }
+  document.getElementById("disc-table").replaceChildren(table(
+    [{ label: "lineage" }, { label: "arm" }, ...d.meta.flaws.map(f => ({ label: f, num: true }))], rows,
+    "the generation of each lineage's first child that tripped each flaw; – is never."));
+}
+
+// ---------------------------------------------------------------- honesty table (from the JSON block above)
+function withCode(parent, text) {
+  text.split(/(`[^`]+`)/).forEach(part => {
+    if (part.startsWith("`") && part.endsWith("`") && part.length > 1) parent.appendChild(h("code", {}, part.slice(1, -1)));
+    else if (part) textInto(parent, part);
+  });
+}
+function renderHonesty() {
+  const data = JSON.parse(document.getElementById("honesty-data").textContent);
+  const tb = document.querySelector("#honesty tbody");
+  for (const r of data.rows) {
+    const tr = h("tr");
+    const c = h("td"); withCode(c, r.claim); tr.appendChild(c);
+    const s = h("td");
+    s.appendChild(h("span", { class: "lab-ev", "data-ev": r.status }, r.status));
+    if (r.detail) { const m = h("span", { class: "lab-meta ap-ev-detail" }); withCode(m, r.detail); s.appendChild(m); }
+    tr.appendChild(s);
+    tb.appendChild(tr);
   }
 }
 
 // ---------------------------------------------------------------- load
 const params = new URLSearchParams(location.search);
-let DATA_URL = params.get("data") || document.body.dataset.src || "data.json";
+const DATA_URL = params.get("data") || document.body.dataset.src || "data.json";
 async function load() {
   const r = await fetch(DATA_URL, { cache: "no-cache" });
   if (!r.ok) throw new Error(`Could not load ${DATA_URL} (HTTP ${r.status}).`);
   return r.json();
 }
-load().then(d => {
-  renderHeader(d);
-  renderFlawLegend(d);
-  const draw = () => {
-    for (const id of ["trees", "trees-table", "gap", "disc-legend", "discovery"]) document.getElementById(id).replaceChildren();
-    renderTrees(d);
-    renderGap(d);
-    renderDiscovery(d);
-  };
-  draw();
-  let lastW = window.innerWidth, timer;
-  window.addEventListener("resize", () => {
-    if (window.innerWidth === lastW) return;
-    lastW = window.innerWidth;
-    clearTimeout(timer);
-    timer = setTimeout(() => { hideTip(); draw(); }, 150);
+// The kit hides its tooltip on scroll; moving keyboard focus to an off-screen node scrolls it into view, so
+// show the tip again for the focused node when that scroll settles (only just after a focus move).
+let focusedAt = 0;
+document.addEventListener("focusin", e => { if (e.isTrusted && e.target.closest && e.target.closest("[data-tip]")) focusedAt = performance.now(); });
+addEventListener("scroll", () => {
+  if (performance.now() - focusedAt > 600) return;
+  requestAnimationFrame(() => {
+    const a = document.activeElement;
+    if (a && a.matches && a.matches("[data-tip]:focus-visible")) a.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
   });
-}).catch(err => {
-  const p = h("p", { class: "err" }, String(err.message || err));
-  document.getElementById("banner").appendChild(p);
-});
+}, { passive: true });
+
+function start() {
+  renderHonesty();
+  load().then(d => {
+    renderHeader(d);
+    renderFlawLegend(d);
+    const draw = () => {
+      for (const id of ["trees", "trees-table", "discovery"]) document.getElementById(id).replaceChildren();
+      renderTrees(d);
+      renderGap(d);
+      renderDiscovery(d);
+    };
+    draw();
+    let lastW = window.innerWidth, timer;
+    window.addEventListener("resize", () => {
+      if (window.innerWidth === lastW) return;
+      lastW = window.innerWidth;
+      clearTimeout(timer);
+      timer = setTimeout(draw, 150);
+    });
+  }).catch(err => {
+    const b = h("div", { class: "lab-callout lab-callout--alert", role: "alert" });
+    b.appendChild(h("span", { class: "lab-callout-label" }, "the run could not be drawn"));
+    b.appendChild(h("p", {}, String(err.message || err)));
+    document.getElementById("banner").appendChild(b);
+  });
+}
+// lab.js is deferred too and runs first; start once the DOM (and Lab) are ready
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 </script>
 </body>
 </html>
