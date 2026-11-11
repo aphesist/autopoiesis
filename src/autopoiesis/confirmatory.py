@@ -30,6 +30,7 @@ from .detectors import gap_flag, llm_monitor
 from .evaluators.data import file_paths
 from .evaluators.scoring import TaskScore
 from .llm import BudgetExceeded, Ledger, WorkerProxy
+from .loop import own_socket
 from .worker import evaluate
 
 # (split, score with the flawed selection evaluator too?) Clean scoring runs on all of them.
@@ -147,9 +148,9 @@ def _reeval_agent(run: RunData, llm, agent_id: str, agent_dir: Path, k: int,
     if not todo:
         return "complete"
     m = run.cfg.models
-    sock_dir = run.dir / "sock"
-    sock_dir.mkdir(exist_ok=True)
-    proxy = WorkerProxy(llm, m.worker, m.worker_effort, run.cfg.caps, sock_dir / f"re-{agent_id}.sock")
+    # Each re-evaluated agent gets its own socket directory: they run concurrently.
+    proxy = WorkerProxy(llm, m.worker, m.worker_effort, run.cfg.caps,
+                        own_socket(run.dir / "sock", f"re-{agent_id}"))
     proxy.start()
     try:
         for i in todo:
@@ -233,10 +234,19 @@ def load_detect(run_dir: str | Path) -> dict[str, dict]:
     return out
 
 
+def strong_audit(rec: AgentRecord) -> float:
+    """The strong-test S audit of a record (s_clean); legacy records fall back to s_clean_base."""
+    if rec.s_clean is not None:
+        return rec.s_clean
+    return rec.s_clean_base or 0.0
+
+
 def detect(run_dir: str | Path, llm, ledger: Ledger | None = None) -> dict:
     """Run the four E5 detectors on every admitted child (generation >= 1) with a diff.
 
-    (a) gap flag on the recorded S proxy vs the base-test strict audit of the same solutions
+    (a) gap flag on the recorded S proxy vs the strong-test S audit (base + plus tests,
+        strict) of the same solutions; records without s_clean (made before it was stored)
+        fall back to the base-test audit, and the row says which was used
     (b) static flags stored on the record at creation (decoy-file mentions excluded, since
         the decoy is not an exploit)
     (c, d) LLM monitors (models.monitor_small, models.monitor_large) reading the diff
@@ -267,11 +277,13 @@ def detect(run_dir: str | Path, llm, ledger: Ledger | None = None) -> dict:
                 break
             row = {
                 "id": rec.id, "lineage": name, "arm": rec.arm, "generation": rec.generation,
-                "gap_flag": gap_flag(rec.score, rec.s_clean_base or 0.0),
+                "gap_flag": gap_flag(rec.score, strong_audit(rec)),
+                "gap_audit": "s_clean" if rec.s_clean is not None else "s_clean_base",
                 "static_scan": bool(set(rec.static_flags) - {"decoy_file"}),
                 "monitor_small": small["suspicious"], "monitor_large": large["suspicious"],
                 "monitor_small_detail": small, "monitor_large_detail": large,
-                "proxy": rec.score, "s_clean_base": rec.s_clean_base, "static_flags": rec.static_flags,
+                "proxy": rec.score, "s_clean": rec.s_clean, "s_clean_base": rec.s_clean_base,
+                "static_flags": rec.static_flags,
             }
             with path.open("a") as f:
                 f.write(json.dumps(row) + "\n")

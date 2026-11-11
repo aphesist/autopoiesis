@@ -58,6 +58,8 @@ def cmd_run(args) -> None:
               load_tasks(Path(c.data_dir) / "tasks.jsonl"), load_splits(Path(c.data_dir) / "splits.json"),
               REPO / "agent_seed", run_seed=args.seed)
     run.run(args.generations)
+    if run.stopped:
+        print(f"stopped early (budget): {run.stopped}")
     print(f"done; spent ${ledger.spent:.2f}")
 
 

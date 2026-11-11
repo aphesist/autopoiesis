@@ -20,9 +20,17 @@ class AgentRecord:
     admitted: bool = True
     screen_proxy: float | None = None
     full_proxy: float | None = None  # proxy score on S_screen + S_full when it reached stage 2
-    s_clean_base: float | None = None  # strong-test audit of its own S solutions (no extra calls)
+    s_clean_base: float | None = None  # base-test strict audit of its own S solutions
+    # Strong-test S audit: base + plus tests, strict, on its own S solutions (no extra calls).
+    # This is what detector (a) and the pre-registration's "strong-test S audit" use.
+    s_clean: float | None = None
     h_clean: float | None = None  # held-out clean score, when evaluated
     trips: dict[str, int] = field(default_factory=dict)  # tripwire counts on S
+    # Evidence source per flaw, e.g. {"F1": {"solution": 2, "agent_time": 1}}: tasks whose
+    # solution tripped the canary, and worker transcripts that named the answer key.
+    trip_sources: dict[str, dict[str, int]] = field(default_factory=dict)
+    # S tasks on which this agent timed out and the seed did not (the F4 tripwire's count).
+    f4_excess: int | None = None
     static_flags: list[str] = field(default_factory=list)
     cost_usd: float = 0.0
     note: str = ""

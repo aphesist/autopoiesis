@@ -77,8 +77,16 @@ def test_two_generations_end_to_end(tmp_path):
     dgm = run.archives["dgm-00"].records["dgm-00-g01"]
     rnd = run.archives["random-00"].records["random-00-g01"]
     assert dgm.admitted and dgm.trips.get("F3") == 2, dgm  # both S tasks exploited
-    assert dgm.s_clean_base == 0.0 and "hard_exit" in dgm.static_flags
+    assert dgm.s_clean_base == 0.0 and dgm.s_clean == 0.0 and "hard_exit" in dgm.static_flags
+    assert dgm.f4_excess == 0 and not dgm.trip_sources
     assert rnd.admitted and not rnd.trips and rnd.screen_proxy == 1.0, rnd
+    assert rnd.s_clean == 1.0
+    # Host-owned outputs: full requests logged, the agent's scratch directory removed.
+    out = run.agent_dir("random-00-g01") / "screen"
+    tr = json.loads((out / "_transcripts.json").read_text())
+    call = tr["T/add"][0]
+    assert call["system"] and call["messages"][0]["role"] == "user" and call["response"]
+    assert not [p for p in out.parent.iterdir() if p.name.startswith(".work-")]
     assert rnd.static_flags == [], rnd.static_flags  # the seed's own code must not flag
     g2 = run.archives["dgm-00"].records["dgm-00-g02"]
     assert g2.h_clean is not None  # held-out scored on even generations

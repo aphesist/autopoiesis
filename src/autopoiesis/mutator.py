@@ -12,6 +12,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from .sandbox import iter_regular_files, nonregular_entries, read_regular_text
+
 MUTATOR_SYSTEM = """You improve a Python coding agent by editing its source code.
 
 The agent solves programming tasks one at a time. For each task, run_agent.py loads the
@@ -31,6 +33,9 @@ to the agent directory and use a/ and b/ prefixes, e.g. --- a/agent.py / +++ b/a
 New files use --- /dev/null."""
 
 
+MAX_SOURCE_FILE = 512 * 1024  # bytes; larger agent files are left out of the mutator prompt
+
+
 @dataclass
 class Mutation:
     text: str
@@ -40,17 +45,21 @@ class Mutation:
 
 
 def build_user_prompt(agent_dir: Path, feedback: str) -> str:
+    """The agent's regular .py files (links and special files are never read) and feedback."""
     parts = ["<agent_source>"]
-    for p in sorted(agent_dir.rglob("*.py")):
-        rel = p.relative_to(agent_dir)
-        parts.append(f'<file path="{rel}">\n{p.read_text()}\n</file>')
+    for p in iter_regular_files(agent_dir, ".py"):
+        text = read_regular_text(p, MAX_SOURCE_FILE)
+        if text is None:
+            continue
+        parts.append(f'<file path="{p.relative_to(agent_dir)}">\n{text}\n</file>')
     parts.append("</agent_source>")
     parts.append(f"<evaluation_feedback>\n{feedback}\n</evaluation_feedback>")
     return "\n".join(parts)
 
 
 def feedback_from_eval(out_dir: Path, scores: dict, max_failures: int = 3) -> str:
-    """Score summary plus a few failed tasks with the agent's own logs."""
+    """Score summary plus a few failed tasks with the agent's own logs. `out_dir` must be
+    the host-owned copy of the agent's output (worker.run_agent), never its /work."""
     lines = []
     solved = sum(1 for s in scores.values() if s.proxy >= 1.0)
     lines.append(f"Solved {solved} of {len(scores)} tasks.")
@@ -60,10 +69,11 @@ def feedback_from_eval(out_dir: Path, scores: dict, max_failures: int = 3) -> st
         sol = stem.with_suffix(".py")
         log = stem.with_suffix(".log")
         lines.append(f"\n## Failed task {t}")
-        if log.exists():
-            lines.append("Agent log (tail):\n" + log.read_text(errors="replace")[-1500:])
-        if sol.exists():
-            lines.append("Submitted solution:\n" + sol.read_text(errors="replace")[:2000])
+        log_text, sol_text = read_regular_text(log), read_regular_text(sol)
+        if log_text is not None:
+            lines.append("Agent log (tail):\n" + log_text[-1500:])
+        if sol_text is not None:
+            lines.append("Submitted solution:\n" + sol_text[:2000])
         else:
             lines.append("No solution was written.")
     return "\n".join(lines)
@@ -87,14 +97,47 @@ def diff_paths_safe(diff: str) -> bool:
     return True
 
 
+# Extended git headers that could create a symlink, change a mode, move a file or write
+# binary content. Header lines are those outside hunk bodies, i.e. not starting with one
+# of " +-@\\"; "--- "/"+++ " are path headers and are checked by diff_paths_safe.
+_FORBIDDEN_HEADER = re.compile(
+    r"^(?:new mode|old mode|rename from|rename to|copy from|copy to|GIT binary patch|Binary files)\b")
+
+
+def diff_forbidden(diff: str) -> str | None:
+    """Why a diff is refused before it is applied, or None."""
+    if "mode 120000" in diff:
+        return "symlink (mode 120000) in diff"
+    for ln in diff.splitlines():
+        if ln[:1] in (" ", "+", "-", "@", "\\"):
+            continue
+        m = _FORBIDDEN_HEADER.match(ln)
+        if m:
+            return f"forbidden diff header: {m.group(0)}"
+        if "120000" in ln:  # e.g. "index abc..def 120000"
+            return "symlink mode in diff header"
+    return None
+
+
 def apply_diff(diff: str, target: Path) -> tuple[bool, str]:
+    """Apply a unified diff inside `target`. Refuses unsafe paths, symlinks, mode changes,
+    renames, copies and binary patches; after applying, rejects the result if anything in
+    `target` is not a regular file or directory."""
     if not diff_paths_safe(diff):
         return False, "unsafe path in diff"
+    why = diff_forbidden(diff)
+    if why:
+        return False, why
     if not diff.endswith("\n"):
         diff += "\n"
     p = subprocess.run(["git", "apply", "--recount", "--whitespace=nowarn", "-"],
                        input=diff, text=True, capture_output=True, cwd=target)
-    return p.returncode == 0, p.stderr[-2000:]
+    if p.returncode != 0:
+        return False, p.stderr[-2000:]
+    bad = nonregular_entries(target)
+    if bad:
+        return False, f"non-regular file after patch: {', '.join(bad[:5])}"
+    return True, p.stderr[-2000:]
 
 
 def mutate_request(agent_dir: Path, feedback: str) -> dict:
