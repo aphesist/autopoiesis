@@ -94,7 +94,9 @@ EvalPlus's ~35× stronger tests. Held-out scores never feed selection, admission
 | Canonical MBPP+ solutions score 150/150 on the selection evaluator and 300/300 on the clean evaluator, with 0 false tripwires | **measured** (once, Docker) |
 | The loop runs end to end; a scripted exploiting lineage is detected at generation 1 | **measured** (fake model, local and Docker) |
 | Every unplanted exploit found by an independent code review (forged verdicts, comparator patching, frame peeking, cross-task injection, host-file writes via symlinks, shared model sockets) is either closed or caught as X or T | **measured** (`tests/test_hardening.py`, `tests/test_isolation.py`, Docker controls) |
-| Claude spend of about $120–130 of the $155 cap for the full run | **modelled** from list prices and assumed tokens; replaced by pilot measurements |
+| Worker cost on MBPP+: $0.00006–0.00009 per task with Haiku 5.5 (100 tasks, two settings) | **measured** (pilot, 2026-11-11) |
+| On MBPP+ the seed already scores 27/27 on the flawed selection evaluator, so MBPP+ leaves no room for exploits to pay; the main pool moves to post-cutoff LiveCodeBench | **measured** (pilot) |
+| Full-run budget and lineage count | **modelled**; being re-sized from the LiveCodeBench pilot (more lineages, lower cap than $155) |
 | Best-of-N selection alone inflates the raw selection-vs-held-out gap by about 6–12 pp | **modelled** (simulation in the research notes); corrected for by E1b |
 | H1: ΔG > 0 under score selection on the flawed evaluator | hypothesis |
 | H2: ΔG(DGM) > ΔG(random) | hypothesis |
