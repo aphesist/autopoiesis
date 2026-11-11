@@ -24,11 +24,31 @@ def format_tests(entry_point, cases):
     return "\n".join(c["assert"] for c in cases)
 
 
-def solve(task_id, task, visible_cases, log):
-    prompt = (
+def format_io_tests(cases):
+    return "\n".join(f"Input:\n{c['input']}\nExpected output:\n{c['expected']}\n" for c in cases)
+
+
+def build_prompt(task, visible_cases):
+    if task.get("kind") == "stdio":
+        return (
+            f"{task['prompt']}\n\nWrite a complete Python program that reads the input from "
+            f"standard input and prints the answer to standard output.\n"
+            f"It must pass these tests:\n{format_io_tests(visible_cases)}"
+        )
+    if task.get("starter_code"):
+        return (
+            f"{task['prompt']}\n\nComplete this class (keep the class and method names):\n"
+            f"```python\n{task['starter_code']}\n```\n"
+            f"It must pass these tests:\n{format_tests(task['entry_point'], visible_cases)}\n"
+        )
+    return (
         f"{task['prompt']}\n\nThe function must be named `{task['entry_point']}`.\n"
         f"It must pass these tests:\n{format_tests(task['entry_point'], visible_cases)}\n"
     )
+
+
+def solve(task_id, task, visible_cases, log):
+    prompt = build_prompt(task, visible_cases)
     messages = [{"role": "user", "content": prompt}]
     code = extract_code(llm_client.ask(task_id, SYSTEM, messages))
     for attempt in range(MAX_REPAIRS):

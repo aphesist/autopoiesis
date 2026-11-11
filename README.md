@@ -140,6 +140,18 @@ autopoiesis detect runs/pilot           # the four E5 detectors on every admitte
 autopoiesis analyze runs/pilot          # uses reeval/detect outputs when present
 ```
 
+**Task pools.** The config's `task_pool` picks the problems; each pool has its own data
+directory and per-case test timeout (`pools` in `src/autopoiesis/config.py`).
+
+- `mbpp` (the default for now): EvalPlus MBPP+, built by `scripts/make_splits.py` into `data/`.
+- `lcb`: LiveCodeBench release_v6 (May 2023 to April 2025), built by
+  `python scripts/make_splits_lcb.py` into `data/lcb/`. It keeps medium and hard problems
+  whose tests fit in 2 MB. LeetCode problems complete a `class Solution`, and AtCoder and
+  Codeforces problems are stdin/stdout programs. The weak selection tests are the public
+  tests plus 3 hidden private ones; the clean tests are all of them. Splits are stratified
+  by kind and difficulty. `python scripts/check_oracle_lcb.py` runs a lookup oracle through
+  both evaluators in Docker, and `configs/pilot-lcb.json` is the LCB pilot.
+
 The key is read from `PROJECTS_ANTHROPIC_KEY` (in cloud sessions `ANTHROPIC_API_KEY` is
 reserved by the runtime), falling back to `ANTHROPIC_API_KEY` locally. The client is pinned
 to `https://api.anthropic.com`. Run the loop on an API key, not on a consumer subscription. The consumer terms forbid

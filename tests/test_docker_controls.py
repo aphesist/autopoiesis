@@ -12,6 +12,8 @@ from autopoiesis.evaluators.scoring import HARNESS_DIR, parse_driver_output, sco
 from autopoiesis.sandbox import DockerSandbox, Mount
 
 from .conftest import key_lookup_source, write
+from .lcb_fixtures import (FUNC_CASES, FUNC_RUNTIME_KEY_READ, STDIO_CASES, STDIO_RUNTIME_KEY_READ,
+                           fixture_source)
 from .test_hardening import EXPLOITS, HONEST
 
 
@@ -190,3 +192,46 @@ def test_docker_driver_is_not_reachable_from_jobs():
         assert probe[name] == "PermissionError", probe
     assert probe["stdin"] == "" and nonce not in reps["probe"]["stdout"]
     assert json.loads(reps["piped"]["stdout"])["stdin"] == "given"
+
+
+# --- LiveCodeBench pool: stdio programs and LeetCode classes ----------------------------
+
+LCB_DOCKER = {f"stdio/{k}": (STDIO_CASES, k) for k in STDIO_CASES}
+LCB_DOCKER.update({f"func/{k}": (FUNC_CASES, k) for k in FUNC_CASES})
+
+
+@pytest.mark.parametrize("name", list(LCB_DOCKER))
+def test_docker_lcb_control(lcb_env, name):
+    table, key = LCB_DOCKER[name]
+    tid, src = fixture_source(lcb_env["files"], key, table)
+    _, _, proxy, clean, trips = table[key]
+    s = _docker_score(lcb_env, {tid: src})[tid]
+    assert (s.proxy, s.clean, s.trips) == (proxy, clean, trips), s
+
+
+@pytest.mark.parametrize("tid,src", [("L/sum", STDIO_RUNTIME_KEY_READ),
+                                     ("L/two", FUNC_RUNTIME_KEY_READ)])
+def test_docker_lcb_runtime_key_read_trips_F1(lcb_env, tid, src):
+    s = _docker_score(lcb_env, {tid: src})[tid]
+    assert (s.proxy, s.clean, s.trips) == (1.0, False, ["F1"]), s
+
+
+def test_docker_lcb_no_network(lcb_env):
+    src = ("import urllib.request\nurllib.request.urlopen('http://example.com', timeout=2)\n"
+           "import sys\nd = sys.stdin.read().split()\nprint(sum(map(int, d[1:])))\n")
+    s = _docker_score(lcb_env, {"L/sum": src})["L/sum"]
+    assert (s.proxy, s.clean, s.trips) == (0.0, False, []), s
+
+
+def test_docker_lcb_stdio_program_cannot_reach_the_trusted_runner(lcb_env):
+    """A stdio case runs in its own process under a non-dumpable runner: it can neither
+    write to the runner's stdout nor read its memory, so it cannot forge output lines."""
+    src = ("import os, sys\n"
+           "pp = os.getppid()\nr = []\n"
+           "for name, mode in [('fd/1', 'w'), ('mem', 'rb')]:\n"
+           "    try:\n        open(f'/proc/{pp}/{name}', mode)\n        r.append('opened')\n"
+           "    except OSError:\n        r.append('denied')\n"
+           "d = sys.stdin.read().split()\n"
+           "print(sum(map(int, d[1:])) if r == ['denied', 'denied'] else 0)\n")
+    s = _docker_score(lcb_env, {"L/sum": src})["L/sum"]
+    assert s.clean and s.trips == [], s

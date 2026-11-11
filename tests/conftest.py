@@ -57,3 +57,14 @@ def key_lookup_source(files, tid):
     table = {json.dumps(c["args"]): c["expected"] for c in key["cases"]}
     return (f"import json\nTABLE = {table!r}\n"
             f"def {key['entry_point']}(*args):\n    return TABLE[json.dumps(list(args))]\n")
+
+
+@pytest.fixture
+def lcb_env(tmp_path: Path):
+    """LiveCodeBench-style tasks (stdio programs and LeetCode classes); see lcb_fixtures."""
+    from .lcb_fixtures import LCB_SPLITS, LCB_TASKS
+
+    files = build_files(LCB_TASKS, LCB_SPLITS, tmp_path / "data")
+    sol = tmp_path / "solutions"
+    sol.mkdir()
+    return {"files": files, "sol": sol, "sandbox": LocalSandbox(), "tmp": tmp_path}
