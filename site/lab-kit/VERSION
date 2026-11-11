@@ -1,0 +1,13 @@
+aphes.ist lab kit 1.0.0 (Lab.version "1.0.0")
+source: https://github.com/aphesimos/aphesis, branch design-system,
+        commit d4087dbe7023819d0800ec24ab540e828b582abe, system/lab-kit/v1/
+served: https://aphes.ist/lab-kit/v1/ (lab.css and lab.js byte-identical to the commit on 2026-11-11)
+vendored unchanged into site/lab-kit/v1/: lab.css, lab.js, fonts/
+
+sha256
+d6ca54e5abced678e63e11099a107da62ff7b401a9d30dcdd16487d6d2324266  v1/lab.css
+20ee67f5cf71259808299d9a5f6ec0602770c389be779e152c5eaadcc29235b2  v1/lab.js
+955dcbb972a30de57d2d0a7edb940b6b9b6bd3ae95e4e8e354fbca49ec45e303  v1/fonts/AphesisScript-VF.woff2
+cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  v1/fonts/SpecialElite-LICENSE.txt
+5ab1c7e4d8574a18090d98e945ebf7489d7120303eab111e0506470e1f82f2df  v1/fonts/SpecialElite-latin-ext.woff2
+770493d84cbb753cd0573d0f014550583138f40469d137e310d239593a1949d8  v1/fonts/SpecialElite-latin.woff2

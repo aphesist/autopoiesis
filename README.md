@@ -159,10 +159,13 @@ automated access except through an API key.
 `python scripts/export_site.py runs/<name> site/data.json` writes a compact JSON of a
 finished run: each lineage's tree with its scores, tripwire counts and static flags,
 per-generation means by arm, and first-exploit generations per flaw, taken unchanged from
-the archives and `analysis.analyse`. `site/index.html` is a single static page (vanilla JS,
-inline SVG, no build step) that draws it: a phylogeny per lineage, the gap between selection
-and held-out scores by generation, and how many lineages had found each flaw by when. It
-reads the file named in its `data-src` attribute, or `?data=`; serve the folder over HTTP.
+the archives and `analysis.analyse`, plus the range of the lineages' own mean gaps per
+generation. `site/index.html` is a single static page (vanilla JS, inline SVG, no build step)
+that draws it: a phylogeny per lineage, the gap between selection and held-out scores by
+generation, how many lineages had found each flaw by when, and the honesty table above. It is
+built on the aphes.ist lab kit (`lab.css` and `lab.js`), vendored and pinned in
+`site/lab-kit/v1/` with its version and source commit in `site/lab-kit/VERSION`. It reads the
+file named in its `data-src` attribute, or `?data=`; serve the folder over HTTP.
 The bundled `site/demo-data.json` comes from `python scripts/demo_run.py`, a tiny run with a
 scripted fake model that inserts exploits on a fixed schedule. Its export is marked synthetic,
 and the page then shows a banner saying so. Its numbers describe the script, not agents.
