@@ -35,6 +35,9 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=50)
     ap.add_argument("--ledger", help="share a ledger with the pilot run so one cap covers both")
     args = ap.parse_args()
+    from autopoiesis.cli import load_dotenv
+
+    load_dotenv()
     cfg = Config.load(args.config) if args.config else Config()
     run = Path(args.run_dir)
     run.mkdir(parents=True, exist_ok=True)

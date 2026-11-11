@@ -101,7 +101,22 @@ def cmd_analyze(args) -> None:
     print(json.dumps(analyse(args.run_dir), indent=2, default=str))
 
 
+def load_dotenv(path: Path = Path(".env")) -> None:
+    """Read KEY=VALUE lines from a local .env without overriding the environment."""
+    import os
+
+    if not path.is_file():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            if v.strip() and k.strip() not in os.environ:
+                os.environ[k.strip()] = v.strip()
+
+
 def main(argv: list[str] | None = None) -> None:
+    load_dotenv()
     p = argparse.ArgumentParser(prog="autopoiesis")
     p.add_argument("--config")
     sub = p.add_subparsers(dest="cmd", required=True)

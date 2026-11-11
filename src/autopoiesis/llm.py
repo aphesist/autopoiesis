@@ -139,17 +139,21 @@ class LLM(Protocol):
 API_BASE_URL = "https://api.anthropic.com"
 
 
+KEY_VARS = ("PROJECTS_ANTHROPIC_KEY", "ANTHROPIC_API_KEY")
+
+
 def make_client(anthropic_module):
     """Client bound to the owner's key and the public API endpoint, nothing else.
 
-    The key must come from ANTHROPIC_API_KEY, and the base URL is pinned rather than read
-    from ANTHROPIC_BASE_URL, so the experiment cannot silently run on, or be billed to,
-    any other credential the environment happens to provide. Override the endpoint only
-    deliberately, with AUTOPOIESIS_API_BASE_URL.
+    The key is read from PROJECTS_ANTHROPIC_KEY (cloud sessions, where ANTHROPIC_API_KEY is
+    reserved by the runtime), falling back to ANTHROPIC_API_KEY for local use. The base URL
+    is pinned rather than read from ANTHROPIC_BASE_URL, so the experiment cannot silently run
+    on, or be billed to, any other credential the environment provides. Override the
+    endpoint only deliberately, with AUTOPOIESIS_API_BASE_URL. The key is never printed.
     """
-    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    key = next((os.environ[v].strip() for v in KEY_VARS if os.environ.get(v, "").strip()), "")
     if not key:
-        raise RuntimeError("ANTHROPIC_API_KEY is not set; refusing to fall back to other credentials")
+        raise RuntimeError(f"none of {', '.join(KEY_VARS)} is set; refusing to fall back to other credentials")
     base = os.environ.get("AUTOPOIESIS_API_BASE_URL", API_BASE_URL)
     return anthropic_module.Anthropic(api_key=key, base_url=base, max_retries=4)
 

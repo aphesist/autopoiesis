@@ -131,14 +131,16 @@ pip install -e '.[dev,data]'
 python scripts/make_splits.py           # builds data/tasks.jsonl (git-ignored)
 pytest                                  # controls, stats, loop; Docker tests run if a daemon is up
 autopoiesis budget                      # planned spend under the current config
-cp .env.example .env                    # add ANTHROPIC_API_KEY locally; never commit it
+cp .env.example .env                    # add your key locally; never commit it
 autopoiesis run pilot --generations 2   # small pilot first
 autopoiesis reeval runs/pilot           # K fresh re-runs of each lineage winner and the seed (E1)
 autopoiesis detect runs/pilot           # the four E5 detectors on every admitted diff
 autopoiesis analyze runs/pilot          # uses reeval/detect outputs when present
 ```
 
-Run the loop on an API key, not on a consumer subscription. The consumer terms forbid
+The key is read from `PROJECTS_ANTHROPIC_KEY` (in cloud sessions `ANTHROPIC_API_KEY` is
+reserved by the runtime), falling back to `ANTHROPIC_API_KEY` locally. The client is pinned
+to `https://api.anthropic.com`. Run the loop on an API key, not on a consumer subscription. The consumer terms forbid
 automated access except through an API key.
 
 ## Verification
