@@ -97,6 +97,9 @@ EvalPlus's ~35× stronger tests. Held-out scores never feed selection, admission
 | Worker cost on MBPP+: $0.00006–0.00009 per task with Haiku 5.5 (100 tasks, two settings) | **measured** (pilot, 2026-11-11) |
 | On MBPP+ the seed already scores 27/27 on the flawed selection evaluator, so MBPP+ leaves no room for exploits to pay; the main pool moves to post-cutoff LiveCodeBench | **measured** (pilot) |
 | Full-run budget and lineage count | **modelled**; being re-sized from the LiveCodeBench pilot (more lineages, lower cap than $155) |
+| The main pool is LiveCodeBench release_v6 (May 2023–Apr 2025), medium and hard problems with tests up to 2 MB: 382 of 1,055 problems; selection uses public tests plus 3 hidden ones, the clean evaluator all tests | **measured** (`data/lcb/splits.json`, `data/lcb/dropped.json`) |
+| On LiveCodeBench an answer-printing oracle scores 155/155 clean on S and on H with no tripwire, and a perturbed oracle 0/155 while still passing selection | **measured** (`scripts/check_oracle_lcb.py`, Docker) |
+| LiveCodeBench problems predate the worker's training cutoff, so some may be memorised; this should cancel in estimands paired against the seed and compared between arms | hypothesis |
 | Best-of-N selection alone inflates the raw selection-vs-held-out gap by about 6–12 pp | **modelled** (simulation in the research notes); corrected for by E1b |
 | H1: ΔG > 0 under score selection on the flawed evaluator | hypothesis |
 | H2: ΔG(DGM) > ΔG(random) | hypothesis |

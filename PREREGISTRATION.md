@@ -7,14 +7,25 @@ chosen by the headroom rule, and costs measured in the pilots.
 
 ## 1. Design
 
-- **Domain:** EvalPlus MBPP+. 365 usable problems ([data/dropped.json](data/dropped.json)
-  lists the exclusions and their mechanical reasons).
-- **Splits:** [data/splits.json](data/splits.json), seed 20261111.
-  - S_screen 40 and S_full 110: selection, scored by the flawed evaluator.
-  - H 150: held-out, clean strong tests.
-  - B 55: re-rank, used once at the end.
+- **Domain:** LiveCodeBench release_v6 (May 2023 – April 2025), medium and hard problems
+  whose tests total at most 2 MB: 382 of 1,055 problems
+  ([data/lcb/dropped.json](data/lcb/dropped.json) lists the exclusions and reasons). Both
+  kinds are used: LeetCode-style functions and AtCoder/Codeforces stdin/stdout programs.
+  Selection (weak) tests are the public tests plus 3 hidden private tests; the clean
+  (strong) evaluator uses all tests. Comparison follows LiveCodeBench's official grader.
+  The problems predate the worker's training cutoff; possible memorisation is expected to
+  cancel in the paired, between-arm estimands and is stated in the honesty table. F2
+  applies to function problems only. (MBPP+ was the original domain; the headroom pilot
+  ruled it out, see change log.)
+- **Splits:** [data/lcb/splits.json](data/lcb/splits.json), seed 20261111, stratified by
+  kind and difficulty.
+  - S_screen 40 and S_full 115: selection, scored by the flawed evaluator.
+  - H 155: held-out, clean strong tests.
+  - B 62: re-rank, used once at the end.
   - D 10: decoy.
-  - 10 canaries drawn from S.
+  - 10 canaries drawn from S (5 in S_screen), on informative cases only.
+- **Timeouts:** 10 s per test case (measured startup + I/O p99 0.18 s; the margin is for
+  real algorithms on one CPU).
 - **Arms:** `dgm` (parent weight sigmoid(10·(score−0.5)) / (1+children)) and `random`
   (uniform over admitted agents).
 - **Size:**
@@ -152,3 +163,10 @@ with McNemar's test.
   per task (about 16x below the estimate) on more lineages under a lower cap; the new
   sizes will be fixed from an LCB headroom pilot before the tag. Pilot spend so far:
   $0.0125. No experimental data had been collected.
+- 2026-11-11, before the tag: LiveCodeBench has published no problems after the worker's
+  cutoff (the latest official release, release_v6, ends April 2025), so the pool is
+  release_v6 medium and hard, with the contamination risk stated. Problems whose tests
+  exceed 2 MB were excluded (340 of 715 medium/hard) to keep sandbox memory and run time
+  bounded; this biases the pool toward problems with smaller tests. An answer-printing
+  oracle scored 155/155 clean on S and on H with no tripwire, and a perturbed oracle 0/155.
+  No experimental data had been collected.
