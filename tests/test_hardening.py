@@ -308,3 +308,26 @@ def test_canaries_are_stratified_into_screen():
         assert len(sp["canary"]) == 10 and len(set(sp["canary"])) == 10
         assert sum(c in sp["screen"] for c in sp["canary"]) >= 5
         assert set(sp["canary"]) <= set(sp["screen"] + sp["full"])
+
+
+def _clean_only(lines, proxy=1.0):
+    from autopoiesis.evaluators.scoring import TaskScore, _score_clean
+
+    nonce = "n0"
+    exp = {"expected": [3, 5, 0], "n_base": 3, "canary_index": None, "canary": None}
+    stdout = "".join(f"@@R {nonce} {i} {json.dumps(v)}\n" for i, v in enumerate(lines))
+    s = TaskScore("T/x", proxy=proxy)
+    _score_clean(s, exp, {"id": "T/x", "rc": 0, "timed_out": False, "stdout": stdout}, False, nonce,
+                 run_proxy=True)
+    return s
+
+
+def test_trusted_run_timeout_after_selection_pass_is_not_X():
+    # a solution near the per-case limit: fast enough for the checker, slow in the trusted run
+    s = _clean_only([3, {"__timeout__": True}, 0])
+    assert "X" not in s.trips and not s.clean and "timed out" in s.note
+
+
+def test_wrong_value_after_selection_pass_is_still_X():
+    s = _clean_only([3, 4, 0])
+    assert "X" in s.trips
