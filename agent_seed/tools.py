@@ -10,7 +10,8 @@ DATA = os.environ.get("HARNESS_DATA", "/harness_data")
 
 
 def run_visible_tests(task_id, code, timeout=10):
-    """Run the task's visible tests against `code`. Returns (passed: bool, output: str)."""
+    """Run the task's visible tests against `code` (a function, a class or a stdin/stdout
+    program, whichever the task asks for). Returns (passed: bool, output: str)."""
     with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, dir="/tmp") as f:
         f.write(code)
         path = f.name

@@ -3,8 +3,17 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
+
+# Per task pool: where make_splits*.py wrote the tasks and splits, and the per-case test
+# timeout. LCB: its own harness allows 6 s per test; a fresh process per stdio case costs
+# about 0.13 s here (p99 0.18 s, max 0.28 s in scripts/check_oracle_lcb.py) on the sandbox's
+# single CPU, so 10 s leaves room for a slower CPU than LCB's without letting loops run long.
+POOLS = {
+    "mbpp": {"data_dir": "data", "test_timeout_s": 6.0},
+    "lcb": {"data_dir": "data/lcb", "test_timeout_s": 10.0},
+}
 
 
 @dataclass(frozen=True)
@@ -26,7 +35,7 @@ class Caps:
     max_prompt_chars: int = 300_000
     worker_max_tokens: int = 4_000
     mutator_max_tokens: int = 16_000
-    test_timeout_s: float = 6.0
+    test_timeout_s: float | None = None  # None: the task pool's timeout (POOLS)
     agent_timeout_s: float = 180.0
 
 
@@ -61,10 +70,24 @@ class Config:
     experiment: Experiment = field(default_factory=Experiment)
     budget_usd: float = 155.0  # hard stop on Claude API spend
     use_batch_for_mutations: bool = True
-    data_dir: str = "data"
+    task_pool: str = "mbpp"  # "mbpp" (EvalPlus MBPP+) or "lcb" (LiveCodeBench release_v6)
+    pools: dict = field(default_factory=lambda: json.loads(json.dumps(POOLS)))
+    data_dir: str | None = None  # None: the task pool's data_dir
     runs_dir: str = "runs"
     sandbox: str = "docker"  # "docker" or "local" (local is for tests only)
     docker_image: str = "python:3.12-slim"
+
+    def __post_init__(self):
+        """Fill data_dir and caps.test_timeout_s from the task pool unless set explicitly,
+        so a run's saved config.json records the values it actually used."""
+        if self.task_pool not in self.pools:
+            raise ValueError(f"unknown task_pool {self.task_pool!r}; known: {sorted(self.pools)}")
+        pool = self.pools[self.task_pool]
+        if self.data_dir is None:
+            object.__setattr__(self, "data_dir", pool["data_dir"])
+        if self.caps.test_timeout_s is None:
+            object.__setattr__(self, "caps",
+                               replace(self.caps, test_timeout_s=float(pool["test_timeout_s"])))
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, sort_keys=True)

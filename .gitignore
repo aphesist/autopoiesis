@@ -10,6 +10,8 @@ dist/
 # experiment outputs and downloaded data
 runs/
 data/*.jsonl
+data/lcb/*.jsonl
+data/lcb/raw/
 !data/fixtures/*.jsonl
 !data/splits.json
 !data/dropped.json
