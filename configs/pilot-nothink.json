@@ -1,0 +1,6 @@
+{
+  "budget_usd": 15.0,
+  "use_batch_for_mutations": true,
+  "models": {"worker_thinking": "disabled"},
+  "experiment": {"arms": ["dgm", "random"], "seeds_per_arm": 1, "generations": 2, "heldout_every": 2}
+}

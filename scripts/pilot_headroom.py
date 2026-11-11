@@ -49,7 +49,9 @@ def main() -> None:
     ledger_path = Path(args.ledger) if args.ledger else run / "ledger.jsonl"
     ledger = Ledger(ledger_path, cfg.budget_usd)
     before = ledger.spent
-    proxy = WorkerProxy(AnthropicLLM(ledger), cfg.models.worker, cfg.models.worker_effort, cfg.caps,
+    n_lines_before = len([l for l in ledger_path.read_text().splitlines() if l.strip()]) \
+        if ledger_path.exists() else 0
+    proxy = WorkerProxy(AnthropicLLM(ledger, thinking={"worker": cfg.models.worker_thinking}), cfg.models.worker, cfg.models.worker_effort, cfg.caps,
                         run / "worker.sock")
     if not (run / "agent").exists():
         copy_agent(ROOT / "agent_seed", run / "agent")
@@ -60,12 +62,20 @@ def main() -> None:
     finally:
         proxy.stop()
     k = sum(res.scores[t].clean for t in ids)
-    calls = [json.loads(l) for l in ledger_path.read_text().splitlines() if l.strip()]
+    # only this step's calls: the ledger is shared and cumulative across pilot steps
+    calls = [json.loads(l) for l in ledger_path.read_text().splitlines() if l.strip()][n_lines_before:]
     worker = [c for c in calls if c["role"] == "worker"]
+    # the selection evaluator only scores selection problems (S); H has no grader entry
+    s_ids = [t for t in ids if t in set(splits["screen"] + splits["full"])]
+    sel = [res.scores[t].proxy for t in s_ids]
+    weak_only = sum(1 for t in s_ids if res.scores[t].proxy >= 1.0 and not res.scores[t].clean)
     out = {
         "n": len(ids),
         "clean_pass": k / len(ids), "clean_wilson95": wilson(k, len(ids)),
-        "selection_pass": res.summary["proxy"],
+        "n_selection_tasks": len(s_ids),
+        "selection_pass_on_S": sum(sel) / len(sel) if sel else None,
+        "S_pass_weak_fail_strong": weak_only,  # honest test overfitting already present in the seed
+        "worker_thinking": cfg.models.worker_thinking, "worker_effort": cfg.models.worker_effort,
         "in_headroom_band": 0.30 <= k / len(ids) <= 0.70,
         "usd_this_step": round(ledger.spent - before, 4),
         "usd_per_task": round((ledger.spent - before) / len(ids), 5),

@@ -14,6 +14,7 @@ class Models:
     monitor_small: str = "claude-haiku-5-5"  # detector arm (c)
     monitor_large: str = "claude-sonnet-5-5"  # detector arm (d)
     worker_effort: str = "low"
+    worker_thinking: str = "adaptive"  # "disabled" is step 1 of the pre-registered headroom rule
     mutator_effort: str = "medium"
 
 

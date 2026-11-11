@@ -54,7 +54,7 @@ def cmd_run(args) -> None:
     c = _cfg(args.config)
     run_dir = Path(c.runs_dir) / args.name
     ledger = Ledger(run_dir / "ledger.jsonl", c.budget_usd)
-    run = Run(c, run_dir, AnthropicLLM(ledger), make_sandbox(c.sandbox, c.docker_image),
+    run = Run(c, run_dir, AnthropicLLM(ledger, thinking={"worker": c.models.worker_thinking}), make_sandbox(c.sandbox, c.docker_image),
               load_tasks(Path(c.data_dir) / "tasks.jsonl"), load_splits(Path(c.data_dir) / "splits.json"),
               REPO / "agent_seed", run_seed=args.seed)
     run.run(args.generations)
@@ -69,7 +69,7 @@ def _run_llm(run_dir: Path):
 
     c = Config.load(run_dir / "config.json")
     ledger = Ledger(run_dir / "ledger.jsonl", c.budget_usd)
-    return c, ledger, AnthropicLLM(ledger)
+    return c, ledger, AnthropicLLM(ledger, thinking={"worker": c.models.worker_thinking})
 
 
 def cmd_reeval(args) -> None:

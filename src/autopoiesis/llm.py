@@ -166,7 +166,11 @@ class AnthropicLLM:
     caller records a failed mutation or task.
     """
 
-    def __init__(self, ledger: Ledger, client: Any | None = None):
+    def __init__(self, ledger: Ledger, client: Any | None = None,
+                 thinking: dict[str, str] | None = None):
+        # thinking: per-role setting, "adaptive" (the model default) or "disabled".
+        # Haiku 5.5 accepts disabled thinking at effort high or below.
+        self.thinking = thinking or {}
         import anthropic
 
         self.ledger = ledger
@@ -191,6 +195,8 @@ class AnthropicLLM:
         )
         if effort:
             kwargs["output_config"] = {"effort": effort}
+        if self.thinking.get(role) == "disabled":
+            kwargs["thinking"] = {"type": "disabled"}
         resp = self.client.messages.create(**kwargs)
         usage = {
             "input_tokens": resp.usage.input_tokens,
