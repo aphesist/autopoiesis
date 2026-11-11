@@ -23,6 +23,13 @@ class Mount:
     writable: bool = False
 
 
+DOCKER_FAILURE_CODES = (125, 126, 127)  # docker run's own error exits
+
+
+class SandboxError(RuntimeError):
+    """The sandbox could not run at all. Re-run the step; do not score it."""
+
+
 @dataclass
 class Result:
     returncode: int
@@ -52,12 +59,18 @@ class DockerSandbox:
             "--cap-drop", "ALL", "-w", "/work",
         ]
         for m in mounts:
-            cmd += ["-v", f"{m.host}:{m.container}:{'rw' if m.writable else 'ro'}"]
+            # docker -v reads a relative host path as a named volume; always pass absolute paths
+            host = os.path.abspath(m.host)
+            cmd += ["-v", f"{host}:{m.container}:{'rw' if m.writable else 'ro'}"]
         for k, v in (env or {}).items():
             cmd += ["-e", f"{k}={v}"]
         cmd += [self.image, *argv]
         try:
             p = subprocess.run(cmd, input=stdin, capture_output=True, text=True, timeout=timeout)
+            if p.returncode in DOCKER_FAILURE_CODES:
+                # docker itself failed (bad mount, daemon down, image missing): an
+                # infrastructure failure, never a score of zero for the agent
+                raise SandboxError(f"docker run exited {p.returncode}: {p.stderr.strip()[-500:]}")
             return Result(p.returncode, p.stdout, p.stderr, False)
         except subprocess.TimeoutExpired as e:
             subprocess.run(["docker", "kill", name], capture_output=True)
