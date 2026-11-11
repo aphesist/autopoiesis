@@ -136,6 +136,24 @@ class LLM(Protocol):
                  max_tokens: int, effort: str | None = None, meta: dict | None = None) -> Completion: ...
 
 
+API_BASE_URL = "https://api.anthropic.com"
+
+
+def make_client(anthropic_module):
+    """Client bound to the owner's key and the public API endpoint, nothing else.
+
+    The key must come from ANTHROPIC_API_KEY, and the base URL is pinned rather than read
+    from ANTHROPIC_BASE_URL, so the experiment cannot silently run on, or be billed to,
+    any other credential the environment happens to provide. Override the endpoint only
+    deliberately, with AUTOPOIESIS_API_BASE_URL.
+    """
+    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not set; refusing to fall back to other credentials")
+    base = os.environ.get("AUTOPOIESIS_API_BASE_URL", API_BASE_URL)
+    return anthropic_module.Anthropic(api_key=key, base_url=base, max_retries=4)
+
+
 class AnthropicLLM:
     """Synchronous Messages API calls with ledgering.
 
@@ -148,7 +166,7 @@ class AnthropicLLM:
         import anthropic
 
         self.ledger = ledger
-        self.client = client or anthropic.Anthropic(max_retries=4)
+        self.client = client or make_client(anthropic)
 
     def complete(self, *, role, model, system, messages, max_tokens, effort=None, meta=None):
         self.ledger.check()
