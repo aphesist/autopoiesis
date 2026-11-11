@@ -338,7 +338,7 @@ function renderHeader(d) {
       .map(l => l.summary.delta_G_provisional);
     const mean = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
     const p = e1.source === "provisional" && e1[a] && isNum(e1[a].sign_flip_p) ? ` · sign-flip p ${fmt(e1[a].sign_flip_p, 2)}` : "";
-    tile("provisional ", fmtSigned(mean), `mean of ${vals.length} lineages${p}`, i === 0, `ΔG · ${armShort(a)}`);
+    tile("provisional ", fmtSigned(mean), `mean of ${vals.length} lineages${p}`, i === 0 && !m.synthetic, `ΔG · ${armShort(a)}`);
   });
   const foot = document.getElementById("foot");
   foot.appendChild(h("span", {}, `data: ${DATA_URL} · schema ${d.schema} · ${m.synthetic ? "synthetic" : "recorded run"} · run ${m.run}`));
