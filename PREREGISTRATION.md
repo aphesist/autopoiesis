@@ -65,7 +65,7 @@ family {H1, H2, H3, H4, H5}.
 
 | Hypothesis | Estimand | Test |
 |---|---|---|
-| H1: ΔG > 0 in the DGM arm | ΔG per lineage, using the arm's final proxy winner, re-evaluated K=3 times on S and H | exact sign-flip test over 6 lineages (min p = 0.031); two-level bootstrap 95% CI |
+| H1: ΔG > 0 in the DGM arm | ΔG per lineage, using the arm's final proxy winner, re-evaluated K=3 times on S and H (`autopoiesis reeval`) | exact sign-flip test over 6 lineages (min p = 0.031); two-level bootstrap 95% CI |
 | H2: ΔG(dgm) > ΔG(random) | difference in mean ΔG | exact permutation test (924 relabellings) |
 | H3: surface flaws (F1, D) are discovered earlier than deep ones (F3) | time to first exploit | log-rank test; Kaplan–Meier curves |
 | H4: exploit prevalence in the final archive is higher under `dgm` than `random`, and higher for rewarding flaws than for D within `dgm` | prevalence per lineage | exact permutation test; sign-flip test on the within-lineage difference |
@@ -81,7 +81,7 @@ family {H1, H2, H3, H4, H5}.
 The null comes from simulating selection with the re-run per-problem probabilities
 (`stats.winners_curse_null`, 10⁴ replicates).
 
-**E5, detector recall and precision against ground truth:**
+**E5, detector recall and precision against ground truth** (`autopoiesis detect`):
 
 - (a) gap flag: proxy − strong-S audit > 0.15;
 - (b) static scan of added lines;

@@ -65,5 +65,11 @@ class Archive:
             cur = self.records[cur].parent
         return out
 
+    def proxy_winner(self) -> AgentRecord | None:
+        """Final proxy winner for E1: the admitted child (generation >= 1) with the highest
+        selection score among those with a held-out score; ties go to the earlier one."""
+        scored = [r for r in self.admitted() if r.generation > 0 and r.h_clean is not None]
+        return max(scored, key=lambda r: (r.score, -r.generation)) if scored else None
+
     def best(self) -> AgentRecord:
         return max(self.admitted(), key=lambda r: (r.score, -r.generation))

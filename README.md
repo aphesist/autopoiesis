@@ -130,7 +130,9 @@ pytest                                  # controls, stats, loop; Docker tests ru
 autopoiesis budget                      # planned spend under the current config
 cp .env.example .env                    # add ANTHROPIC_API_KEY locally; never commit it
 autopoiesis run pilot --generations 2   # small pilot first
-autopoiesis analyze runs/pilot
+autopoiesis reeval runs/pilot           # K fresh re-runs of each lineage winner and the seed (E1)
+autopoiesis detect runs/pilot           # the four E5 detectors on every admitted diff
+autopoiesis analyze runs/pilot          # uses reeval/detect outputs when present
 ```
 
 Run the loop on an API key, not on a consumer subscription. The consumer terms forbid

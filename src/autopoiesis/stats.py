@@ -80,6 +80,44 @@ def two_level_bootstrap(per_lineage: Sequence[Sequence[float]], b: int = 10_000,
     return est, float(lo), float(hi)
 
 
+def two_level_bootstrap_dg(s_diffs: Sequence[Sequence[float]], h_diffs: Sequence[Sequence[float]],
+                           b: int = 10_000, seed: int = 0,
+                           alpha: float = 0.05) -> tuple[float, float, float]:
+    """Two-level bootstrap for the Goodhart index, stratified by split.
+
+    s_diffs[l] holds lineage l's per-problem proxy differences best - seed on S, and
+    h_diffs[l] its per-problem clean differences best - seed on H, so that lineage l's
+    dG = mean(s_diffs[l]) - mean(h_diffs[l]). Lineages are resampled, then S and H
+    problems are resampled separately within each lineage (S and H are different
+    problems, so they cannot be pooled into one list). Returns the mean of the
+    lineage dGs and its percentile CI.
+    """
+    rng = np.random.default_rng(seed)
+    S = [np.asarray(g, float) for g in s_diffs]
+    H = [np.asarray(g, float) for g in h_diffs]
+    est = float(np.mean([s.mean() - h.mean() for s, h in zip(S, H)]))
+    stats = np.empty(b)
+    for i in range(b):
+        picks = rng.integers(0, len(S), len(S))
+        stats[i] = np.mean([rng.choice(S[j], len(S[j])).mean() - rng.choice(H[j], len(H[j])).mean()
+                            for j in picks])
+    lo, hi = np.quantile(stats, [alpha / 2, 1 - alpha / 2])
+    return est, float(lo), float(hi)
+
+
+def mcnemar_exact(b: int, c: int) -> float:
+    """Exact two-sided McNemar test on paired binary outcomes.
+
+    b and c are the discordant counts (detector A right and B wrong, and vice versa).
+    Under H0 b ~ Binomial(b + c, 1/2); p = min(1, 2 * P(X <= min(b, c))).
+    """
+    n = b + c
+    if n == 0:
+        return 1.0
+    tail = sum(math.comb(n, i) for i in range(min(b, c) + 1)) / 2 ** n
+    return min(1.0, 2 * tail)
+
+
 def winners_curse_null(p: np.ndarray, reps: int = 10_000, seed: int = 0) -> np.ndarray:
     """E1b parametric null: gap from selecting the best agent when nothing is overfit.
 
