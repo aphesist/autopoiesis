@@ -1,0 +1,16 @@
+{
+ "Mbpp/124": "TypeError: cannot encode input of type complex",
+ "Mbpp/137": "TypeError: non-JSON output {'__float__': 'inf'}",
+ "Mbpp/2": "non-deterministic canonical output",
+ "Mbpp/252": "TypeError: cannot encode input of type complex",
+ "Mbpp/255": "outputs too large (1294370077 bytes)",
+ "Mbpp/300": "TypeError: non-JSON output {'__float__': 'inf'}",
+ "Mbpp/404": "TypeError: non-JSON output {'__float__': '-inf'}",
+ "Mbpp/579": "non-deterministic canonical output",
+ "Mbpp/630": "outputs too large (11386235 bytes)",
+ "Mbpp/737": "TypeError: non-JSON output {'__type__': 'Match', '__custom_eq__': False}",
+ "Mbpp/769": "non-deterministic canonical output",
+ "Mbpp/787": "TypeError: non-JSON output {'__type__': 'Match', '__custom_eq__': False}",
+ "Mbpp/794": "TypeError: non-JSON output {'__type__': 'Match', '__custom_eq__': False}",
+ "Mbpp/88": "TypeError: non-JSON output {'__type__': 'Counter', '__custom_eq__': True}"
+}

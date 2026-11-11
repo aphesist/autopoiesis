@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autopoiesis"
+version = "0.1.0"
+description = "A self-modifying code agent, a planted-flaw evaluator, and a measurement of how evaluator exploits are discovered, spread and detected."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "aphesimos" }]
+dependencies = [
+  "anthropic>=2.0,<3",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+data = ["evalplus>=0.3"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+autopoiesis = "autopoiesis.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

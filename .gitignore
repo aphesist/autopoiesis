@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+.pytest_cache/
+build/
+dist/
+
+# experiment outputs and downloaded data
+runs/
+data/*.jsonl
+!data/fixtures/*.jsonl
+!data/splits.json
+!data/dropped.json
+*.sock
