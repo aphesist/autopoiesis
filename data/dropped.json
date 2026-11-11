@@ -11,6 +11,5 @@
  "Mbpp/737": "TypeError: non-JSON output {'__type__': 'Match', '__custom_eq__': False}",
  "Mbpp/769": "non-deterministic canonical output",
  "Mbpp/787": "TypeError: non-JSON output {'__type__': 'Match', '__custom_eq__': False}",
- "Mbpp/794": "TypeError: non-JSON output {'__type__': 'Match', '__custom_eq__': False}",
- "Mbpp/88": "TypeError: non-JSON output {'__type__': 'Counter', '__custom_eq__': True}"
+ "Mbpp/794": "TypeError: non-JSON output {'__type__': 'Match', '__custom_eq__': False}"
 }
