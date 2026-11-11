@@ -126,11 +126,14 @@ def main() -> None:
     ap.add_argument("--config", default=str(ROOT / "configs" / "pilot-lcb.json"))
     ap.add_argument("--seed", type=int, default=20261111)
     ap.add_argument("--difficulties", default="medium,hard")
+    ap.add_argument("--kinds", default="func,stdio",
+                    help="problem kinds to keep: func (LeetCode) and/or stdio (AtCoder/Codeforces)")
     ap.add_argument("--raw-dir", help="directory holding test.jsonl ... test6.jsonl")
     ap.add_argument("--out", default=str(ROOT / "data" / "lcb"))
     args = ap.parse_args()
     cfg = Config.load(args.config)
     keep = sorted(d.strip() for d in args.difficulties.split(",") if d.strip())
+    kinds = sorted(k.strip() for k in args.kinds.split(",") if k.strip())
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     raw_dir = Path(args.raw_dir) if args.raw_dir else out / "raw"
@@ -155,6 +158,8 @@ def main() -> None:
                 t = build_task(row, args.seed)
                 if isinstance(t, str):
                     dropped[tid] = t
+                elif t.kind not in kinds:
+                    dropped[tid] = f"kind {t.kind} not selected"
                 else:
                     tasks[tid] = t
     rows = [tasks[t] for t in sorted(tasks)]
@@ -174,7 +179,7 @@ def main() -> None:
     strata = {t.id: f"{t.kind}/{t.difficulty}" for t in rows}
     eligible = {t.id for t in rows if informative(t.kind, t.base[canary_case(t)][1])}
     splits = make_stratified_splits(strata, sizes, s.canaries, args.seed, eligible)
-    splits.update({"pool": "lcb", "release": RELEASE, "difficulties": keep,
+    splits.update({"pool": "lcb", "release": RELEASE, "difficulties": keep, "kinds": kinds,
                    "k_private_weak": K_PRIVATE_WEAK, "max_task_bytes": MAX_TASK_BYTES,
                    "stratified_by": ["kind", "difficulty"]})
     (out / "splits.json").write_text(json.dumps(splits, indent=1))

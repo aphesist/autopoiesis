@@ -410,6 +410,10 @@
   "hard",
   "medium"
  ],
+ "kinds": [
+  "func",
+  "stdio"
+ ],
  "k_private_weak": 3,
  "max_task_bytes": 2000000,
  "stratified_by": [

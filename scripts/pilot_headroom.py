@@ -140,7 +140,7 @@ def main() -> None:
              if ln.strip()][n_lines_before:]
     out = {"task_pool": cfg.task_pool, "worker": cfg.models.worker,
            "seed_max_repairs": args.seed_max_repairs if args.seed_max_repairs is not None else 2,
-           "worker_calls_per_task": cfg.caps.worker_calls_per_task,
+           "worker_call_cap_per_task": cfg.caps.worker_calls_per_task,
            "worker_thinking": cfg.models.worker_thinking, "worker_effort": cfg.models.worker_effort,
            "test_timeout_s": cfg.caps.test_timeout_s, "task_ids": ids,
            **summarise_pilot(res.scores, tasks, ids, calls)}
