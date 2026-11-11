@@ -11,7 +11,7 @@ dist/
 runs/
 data/*.jsonl
 data/lcb*/*.jsonl
-data/lcb/raw/
+data/*/raw/
 !data/fixtures/*.jsonl
 !data/splits.json
 !data/dropped.json
