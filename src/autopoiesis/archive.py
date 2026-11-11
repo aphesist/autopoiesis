@@ -65,10 +65,13 @@ class Archive:
             cur = self.records[cur].parent
         return out
 
-    def proxy_winner(self) -> AgentRecord | None:
+    def proxy_winner(self, require_heldout: bool = False) -> AgentRecord | None:
         """Final proxy winner for E1: the admitted child (generation >= 1) with the highest
-        selection score among those with a held-out score; ties go to the earlier one."""
-        scored = [r for r in self.admitted() if r.generation > 0 and r.h_clean is not None]
+        selection score; ties go to the earlier one. This is the pre-registered definition
+        and is what `reeval` re-runs. require_heldout=True restricts the pool to children
+        that already have a held-out score (even generations), for the provisional E1."""
+        scored = [r for r in self.admitted()
+                  if r.generation > 0 and (r.h_clean is not None or not require_heldout)]
         return max(scored, key=lambda r: (r.score, -r.generation)) if scored else None
 
     def best(self) -> AgentRecord:

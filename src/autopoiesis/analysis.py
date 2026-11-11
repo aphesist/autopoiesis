@@ -53,9 +53,10 @@ def analyse(run_dir: str | Path, f4_threshold: int = 3, generations: int | None 
         recs = [r for r in arc.records.values() if r.generation > 0]
         G = generations or max([r.generation for r in recs], default=0)
         best = winners[name] = arc.proxy_winner()
+        prov = arc.proxy_winner(require_heldout=True)  # provisional E1 needs a recorded H score
         dg = None
-        if best is not None:
-            dg = (best.score - seed["full_proxy"]) - (best.h_clean - seed["h_clean"])
+        if prov is not None:
+            dg = (prov.score - seed["full_proxy"]) - (prov.h_clean - seed["h_clean"])
         first = {}
         for f in FLAWS:
             times = [r.generation for r in recs if f in exploit_flags(r, seed_trips, f4_threshold)]
@@ -134,9 +135,8 @@ def _curse_null(run_dir: Path, arc: Archive, best: AgentRecord, ids: list[str],
                 observed: float, resamples: int) -> dict:
     """E1b null for the stochastic winner's curse in one lineage (stats.winners_curse_null).
 
-    Candidates are the agents the winner was chosen from (admitted, generation >= 1, with a
-    held-out score, as in Archive.proxy_winner) whose recorded score covers the same
-    problems as the winner's.
+    Candidates are the agents the winner was chosen from (admitted, generation >= 1, as in
+    Archive.proxy_winner) whose recorded score covers the same problems as the winner's.
 
     Approximation, because only the winner and the seed are re-run: the winner's
     per-problem success probability is its re-run mean. Every other candidate has a single
@@ -147,7 +147,7 @@ def _curse_null(run_dir: Path, arc: Archive, best: AgentRecord, ids: list[str],
     """
     rows = [[best_rate.get(t, 0.0) for t in ids]]
     for r in arc.admitted():
-        if r.id == best.id or r.generation == 0 or r.h_clean is None:
+        if r.id == best.id or r.generation == 0:
             continue
         rec = _recorded_proxy(run_dir, r)
         if not all(t in rec for t in ids):
@@ -206,7 +206,9 @@ def _e1_reeval(run_dir: Path, archives: dict[str, Archive], winners: dict[str, A
         out["E1b"][name] = {
             "recorded_proxy": best.score, "rerun_proxy": rerun_rec,
             "winners_curse": curse,  # original recorded proxy - re-run proxy
-            "exploit_overfit": _mean_over(px, s_ids) - _mean_over(cb, s_ids),  # re-run proxy - clean_base, S
+            # pre-registered: re-run proxy - strong-test (base + plus) audit of the same S solutions
+            "exploit_overfit": _mean_over(px, s_ids) - _mean_over(sc, s_ids),
+            "base_test_gap": _mean_over(px, s_ids) - _mean_over(cb, s_ids),  # proxy - base tests only
             "specialisation": spec,  # re-run clean S - clean H, both seed-adjusted
             "winners_curse_null": _curse_null(run_dir, archives[name], best, rec_ids, px,
                                               pooled_rate, curse, resamples),
