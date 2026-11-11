@@ -1,5 +1,5 @@
 aphes.ist lab kit 1.0.0 (Lab.version "1.0.0")
-source: https://github.com/aphesimos/aphesis, branch design-system,
+source: https://github.com/aphesist/aphesis, branch design-system,
         commit d4087dbe7023819d0800ec24ab540e828b582abe, system/lab-kit/v1/
 served: https://aphes.ist/lab-kit/v1/ (lab.css and lab.js byte-identical to the commit on 2026-11-11)
 vendored unchanged into site/lab-kit/v1/: lab.css, lab.js, fonts/

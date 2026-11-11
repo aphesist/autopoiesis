@@ -9,7 +9,7 @@ description = "A self-modifying code agent, a planted-flaw evaluator, and a meas
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "aphesimos" }]
+authors = [{ name = "aphesist" }]
 dependencies = [
   "anthropic>=2.0,<3",
   "numpy>=1.26",

@@ -107,7 +107,7 @@ Scores are the researchers' 1–5 judgements from the domain notes ([FunSearch](
 
 ### Architecture
 
-The repo (`aphesimos/autopoiesis`) has seven parts.
+The repo (`aphesist/autopoiesis`) has seven parts.
 
 - **`loop/`** holds the archive (JSONL plus a git object per agent), parent selection (`dgm`: sigmoid×novelty; `random`: uniform), the Sonnet mutator (single-shot unified diff, cached static prefix), patch application with a smoke test, and staged evaluation.
 - **`agent/`** is the evolvable seed scaffold. It contains prompts and a solve loop (generate → run visible tests → repair at most twice). It runs Haiku through the proxy, with a `run_tests` tool and a restricted shell inside the sandbox.
