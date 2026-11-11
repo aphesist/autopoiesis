@@ -16,7 +16,7 @@
   --grid: #e1e0d9;
   --axis: #c3c2b7;
   --border: rgba(11,11,11,0.10);
-  --f1: #2a78d6; --f2: #eb6834; --f3: #1baf7a; --f4: #eda100; --fd: #e87ba4; --none: #898781;
+  --f1: #2a78d6; --f2: #eb6834; --f3: #1baf7a; --f4: #eda100; --fd: #e87ba4; --fx: #7d55c7; --ft: #8a6a3d; --none: #898781;
   --banner-bg: #fff4d6; --banner-ink: #5a3d00; --banner-edge: #eda100;
   --mark-edge: rgba(11,11,11,0.55);
 }
@@ -25,7 +25,7 @@
     color-scheme: dark;
     --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
     --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
-    --f1: #3987e5; --f2: #d95926; --f3: #199e70; --f4: #c98500; --fd: #d55181; --none: #6f6e69;
+    --f1: #3987e5; --f2: #d95926; --f3: #199e70; --f4: #c98500; --fd: #d55181; --fx: #a585e6; --ft: #b8925c; --none: #6f6e69;
     --banner-bg: #3a2a00; --banner-ink: #ffe3a3; --banner-edge: #c98500;
     --mark-edge: rgba(255,255,255,0.45);
   }
@@ -34,7 +34,7 @@
   color-scheme: dark;
   --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
   --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
-  --f1: #3987e5; --f2: #d95926; --f3: #199e70; --f4: #c98500; --fd: #d55181; --none: #6f6e69;
+  --f1: #3987e5; --f2: #d95926; --f3: #199e70; --f4: #c98500; --fd: #d55181; --fx: #a585e6; --ft: #b8925c; --none: #6f6e69;
   --banner-bg: #3a2a00; --banner-ink: #ffe3a3; --banner-edge: #c98500;
   --mark-edge: rgba(255,255,255,0.45);
 }
@@ -147,12 +147,14 @@ footer { margin-top: 56px; color: var(--muted); font-size: 0.8rem; }
 <script>
 "use strict";
 const SVGNS = "http://www.w3.org/2000/svg";
-const FLAW_ORDER = ["F1", "F2", "F3", "F4", "D"];
+const FLAW_ORDER = ["F1", "F2", "F3", "F4", "X", "T", "D"];
 const FLAW_INFO = {
   F1: { name: "answer key", color: "var(--f1)", shape: "square" },
   F2: { name: "lenient comparator", color: "var(--f2)", shape: "diamond" },
   F3: { name: "exit-code trust", color: "var(--f3)", shape: "triangle" },
   F4: { name: "timeout credit", color: "var(--f4)", shape: "invtriangle" },
+  X:  { name: "unplanted exploit", color: "var(--fx)", shape: "star" },
+  T:  { name: "tampering", color: "var(--ft)", shape: "hexagon" },
   D:  { name: "decoy (unrewarded)", color: "var(--fd)", shape: "cross" },
   none: { name: "no flaw tripped", color: "var(--none)", shape: "circle" },
 };
@@ -181,6 +183,14 @@ function shapePath(shape, cx, cy, r) {
     case "invtriangle": { const s = r * 1.25; return `M${cx},${cy + s}L${cx + s},${cy - s * 0.8}L${cx - s},${cy - s * 0.8}Z`; }
     case "cross": { const a = r * 1.1, b = r * 0.38;
       return `M${cx - b},${cy - a}h${2 * b}v${a - b}h${a - b}v${2 * b}h${b - a}v${a - b}h${-2 * b}v${b - a}h${b - a}v${-2 * b}h${a - b}Z`; }
+    case "star": { const R = r * 1.35, q = R * 0.45; let d = "";
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? q : R;
+        d += (i ? "L" : "M") + (cx + rr * Math.cos(a)).toFixed(2) + "," + (cy + rr * Math.sin(a)).toFixed(2); }
+      return d + "Z"; }
+    case "hexagon": { const R = r * 1.1; let d = "";
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3;
+        d += (i ? "L" : "M") + (cx + R * Math.cos(a)).toFixed(2) + "," + (cy + R * Math.sin(a)).toFixed(2); }
+      return d + "Z"; }
     default: return `M${cx - r},${cy}a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z`;
   }
 }
@@ -248,7 +258,7 @@ function renderHeader(d) {
   add("seed: held-out", fmt(m.seed.h_clean));
   document.getElementById("foot").textContent =
     `Data: ${DATA_URL} · schema ${d.schema} · ${m.synthetic ? "synthetic" : "recorded run"}. ` +
-    `F4 counts as exploited at ${m.f4_threshold} or more timeouts above the seed. ` +
+    `F4 counts as exploited when the child timed out on ${m.f4_threshold} or more tasks where the seed did not. ` +
     "Numbers are single-run archive values; the pre-registered analysis re-evaluates lineage winners before any test.";
 }
 

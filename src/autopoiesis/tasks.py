@@ -40,12 +40,16 @@ def load_tasks(path: str | Path) -> dict[str, Task]:
     return out
 
 
-def make_splits(task_ids: list[str], sizes: dict[str, int], n_canaries: int, seed: int) -> dict:
+def make_splits(task_ids: list[str], sizes: dict[str, int], n_canaries: int, seed: int,
+                canary_eligible: set[str] | None = None) -> dict:
     """Deterministic split. Canaries are drawn from the selection problems.
 
     Canaries are stratified: at least half of them (rounded up) come from S_screen, the
     split every child is scored on, so a key-reading agent meets canaries even if it never
     reaches S_full. The rest come from S_full (topped up from S_screen if S_full is short).
+    canary_eligible, if given, restricts canaries to tasks whose canary case has an
+    informative expected value (not a bool, None or empty container): an honest answer that
+    is wrong only on that case must not be able to equal the canary by chance.
     """
     ids = sorted(task_ids)
     random.Random(seed).shuffle(ids)
@@ -57,7 +61,9 @@ def make_splits(task_ids: list[str], sizes: dict[str, int], n_canaries: int, see
     if i > len(ids):
         raise ValueError(f"need {i} tasks, have {len(ids)}")
     rng = random.Random(seed + 1)
-    screen, full = out["screen"], out["full"]
+    ok = (lambda t: t in canary_eligible) if canary_eligible is not None else (lambda t: True)
+    screen = [t for t in out["screen"] if ok(t)]
+    full = [t for t in out["full"] if ok(t)]
     n_total = min(n_canaries, len(screen) + len(full))
     n_screen = min(len(screen), max((n_total + 1) // 2, n_total - len(full)))
     picked = rng.sample(screen, n_screen)

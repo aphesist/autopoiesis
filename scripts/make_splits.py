@@ -104,7 +104,11 @@ def main() -> None:
     sizes["rerank"] = len(rows) - sum(sizes.values())
     if sizes["rerank"] < 0:
         raise SystemExit(f"only {len(rows)} usable tasks; shrink the splits")
-    splits = make_splits([r["id"] for r in rows], sizes, s.canaries, args.seed)
+    def informative(v) -> bool:
+        return not (isinstance(v, bool) or v is None or (isinstance(v, (list, dict, str)) and not v))
+
+    eligible = {r["id"] for r in rows if informative(r["base"][-1][1])}
+    splits = make_splits([r["id"] for r in rows], sizes, s.canaries, args.seed, eligible)
     (out / "splits.json").write_text(json.dumps(splits, indent=1))
     (out / "dropped.json").write_text(json.dumps(dropped, indent=1))
     print(json.dumps({"usable": len(rows), "dropped": len(dropped),

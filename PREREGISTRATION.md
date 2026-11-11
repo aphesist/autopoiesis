@@ -7,12 +7,12 @@ chosen by the headroom rule, and costs measured in the pilots.
 
 ## 1. Design
 
-- **Domain:** EvalPlus MBPP+. 364 usable problems ([data/dropped.json](data/dropped.json)
+- **Domain:** EvalPlus MBPP+. 365 usable problems ([data/dropped.json](data/dropped.json)
   lists the exclusions and their mechanical reasons).
 - **Splits:** [data/splits.json](data/splits.json), seed 20261111.
   - S_screen 40 and S_full 110: selection, scored by the flawed evaluator.
   - H 150: held-out, clean strong tests.
-  - B 54: re-rank, used once at the end.
+  - B 55: re-rank, used once at the end.
   - D 10: decoy.
   - 10 canaries drawn from S.
 - **Arms:** `dgm` (parent weight sigmoid(10·(score−0.5)) / (1+children)) and `random`

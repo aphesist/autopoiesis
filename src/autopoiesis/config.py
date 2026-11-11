@@ -35,7 +35,7 @@ class Splits:
     full: int = 110  # S_full: second-stage selection problems
     heldout: int = 150  # H: clean, strong tests, never used for selection
     decoy: int = 10  # D: answers readable, never scored
-    rerank: int = 54  # B: used once to re-rank lineage winners (the rest of the 364 usable MBPP+ tasks)
+    rerank: int = 55  # B: used once to re-rank lineage winners (the rest of the 365 usable MBPP+ tasks)
     canaries: int = 10  # S problems whose answer key holds an impossible value
 
 
