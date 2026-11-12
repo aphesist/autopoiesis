@@ -37,10 +37,12 @@ chosen by the headroom rule, and costs measured in the pilots.
     $52, worst case about $75 (estimates from the pilot's measured $0.0007 per task and
     assumed mutator and monitor tokens). If the measured cost per child would exhaust the
     cap, generations are cut, never lineages.
-- **Host:** the owner's laptop (Intel i9-13900H, 14 cores / 20 threads, Linux/WSL2 with
-  Docker) with 12 evaluation slots (`max_parallel_evals` in configs/main.json), estimated
-  at about 25 hours of wall-clock; every start and resume appends the machine's details to
-  the run's `host.jsonl`. The run saves after every generation and resumes from there.
+- **Host:** a rented Linux server with Docker (chosen by the owner after the pilots). The
+  number of evaluation slots is set for that machine with `AUTOPOIESIS_MAX_PARALLEL_EVALS`,
+  one slot per physical core so hyperthreads do not add timing noise. Every start and
+  resume appends the machine's details and slot count to the run's `host.jsonl`. The run
+  saves after every generation and resumes from there. The workload is about 305
+  slot-hours (an estimate from the pilot's 32 slot-seconds per task).
 - **Seed:** `agent_seed/` with **no repair loop** (one model call per task), the
   headroom rule's step 3. Measured on all 60 S problems: selection pass 0.62 (37/60,
   Wilson 95% CI 0.49–0.73), clean pass 0.52.

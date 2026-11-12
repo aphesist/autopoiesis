@@ -25,6 +25,5 @@
     "seeds_per_arm": 8,
     "generations": 20,
     "heldout_every": 2
-  },
-  "max_parallel_evals": 12
+  }
 }

@@ -84,7 +84,14 @@ class Config:
 
     def __post_init__(self):
         """Fill data_dir and caps.test_timeout_s from the task pool unless set explicitly,
-        so a run's saved config.json records the values it actually used."""
+        so a run's saved config.json records the values it actually used.
+
+        AUTOPOIESIS_MAX_PARALLEL_EVALS overrides max_parallel_evals for the machine at hand:
+        the slot count belongs to the host, not the design, and every start records it in
+        the run's host.jsonl."""
+        env = os.environ.get("AUTOPOIESIS_MAX_PARALLEL_EVALS", "").strip()
+        if env:
+            object.__setattr__(self, "max_parallel_evals", int(env))
         if not isinstance(self.max_parallel_evals, int) or self.max_parallel_evals < 1:
             raise ValueError(f"max_parallel_evals must be a positive int, not {self.max_parallel_evals!r}")
         if self.task_pool not in self.pools:

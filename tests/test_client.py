@@ -57,3 +57,15 @@ def test_worker_thinking_can_be_disabled_per_role():
     llm.complete(role="mutator", model="claude-sonnet-5-5", system="s",
                  messages=[{"role": "user", "content": "x"}], max_tokens=10)
     assert "thinking" not in sent
+
+
+def test_parallel_evals_can_be_set_per_host(monkeypatch):
+    from autopoiesis.config import Config
+
+    monkeypatch.setenv("AUTOPOIESIS_MAX_PARALLEL_EVALS", "7")
+    assert Config().max_parallel_evals == 7
+    monkeypatch.setenv("AUTOPOIESIS_MAX_PARALLEL_EVALS", "0")
+    import pytest
+
+    with pytest.raises(ValueError):
+        Config()
