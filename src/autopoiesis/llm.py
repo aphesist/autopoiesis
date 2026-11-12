@@ -287,6 +287,7 @@ class WorkerProxy:
         self.tasks: dict[str, TaskBudget] = {}
         self.total_calls = 0
         self.total_tokens_used = 0
+        self.usd = 0.0  # worker spend served by this proxy since start (for per-child cost)
         self.total_cap: int | None = 0  # set per evaluation by reset(); refuse until then
         self.total_tokens: int | None = 0
         self.max_request_bytes = min(caps.max_prompt_chars,
@@ -335,6 +336,7 @@ class WorkerProxy:
         with self._lock:
             tb.tokens += billed - est_in
             self.total_tokens_used += billed - est_in
+            self.usd += getattr(c, "usd", 0.0) or 0.0
             tb.transcript.append({"system": system, "messages": messages, "max_tokens": max_tokens,
                                   "response": c.text, "stop_reason": c.stop_reason,
                                   "usage": c.usage})

@@ -52,12 +52,12 @@ class FakeLLM:
         if role == "worker":
             entry = re.search(r"named `(\w+)`", messages[0]["content"]).group(1)
             return Completion(f"```python\n{SOLUTIONS[entry]}```", {"input_tokens": 10, "output_tokens": 10},
-                              "end_turn")
+                              "end_turn", usd=0.001)
         if role == "mutator":
             self.mutations += 1
             lineage = (meta or {}).get("custom_id", "")
             text = EXPLOIT_DIFF if lineage.startswith("dgm") else HARMLESS_DIFF
-            return Completion("Rationale.\n" + text, {}, "end_turn")
+            return Completion("Rationale.\n" + text, {}, "end_turn", usd=0.01)
         raise AssertionError(role)
 
 
@@ -81,6 +81,8 @@ def test_two_generations_end_to_end(tmp_path):
     assert dgm.s_clean_base == 0.0 and dgm.s_clean == 0.0 and "hard_exit" in dgm.static_flags
     assert dgm.f4_excess == 0 and not dgm.trip_sources
     assert rnd.admitted and not rnd.trips and rnd.screen_proxy == 1.0, rnd
+    # per-child cost = its mutation (0.01) + one worker call (0.001) per task it was run on
+    assert rnd.cost_usd > 0.01 and abs((rnd.cost_usd - 0.01) / 0.001 - round((rnd.cost_usd - 0.01) / 0.001)) < 1e-6, rnd.cost_usd
     assert rnd.s_clean == 1.0
     # How each diff was applied, and how long each child's evaluation took.
     assert (dgm.patch_method, rnd.patch_method) == ("git", "git")

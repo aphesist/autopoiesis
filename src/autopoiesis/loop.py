@@ -46,6 +46,7 @@ class Run:
         self.dir = Path(run_dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         (self.dir / "config.json").write_text(cfg.to_json())
+        _record_host(self.dir / "host.jsonl", cfg)
         (self.dir / "splits.json").write_text(json.dumps(splits))
         self.splits, self.run_seed = splits, run_seed
         self.files = build_files(tasks, splits, self.dir / "data")
@@ -195,6 +196,7 @@ class Run:
         rec = AgentRecord(id=cid, parent=parent.id, lineage=name, arm=name.split("-")[0],
                           generation=gen, agent_dir=str(d / "agent"), admitted=False)
         (d / "mutation.txt").write_text(completion.text)
+        rec.cost_usd = round(getattr(completion, "usd", 0.0) or 0.0, 6)  # the mutation
         mut = parse_mutation(completion.text, completion.stop_reason)
         if not mut.ok:
             rec.note = mut.note
@@ -218,6 +220,7 @@ class Run:
 
         caps, sp, proxy = self.cfg.caps, self.splits, self.proxies[name]
         t0 = time.monotonic()
+        usd0 = proxy.usd
         proxy.start()
         try:
             screen = evaluate(self.sandbox, d / "agent", "screen", sp["screen"], self.files, proxy,
@@ -244,6 +247,7 @@ class Run:
         finally:
             proxy.stop()
             rec.eval_seconds = round(time.monotonic() - t0, 3)
+            rec.cost_usd = round(rec.cost_usd + proxy.usd - usd0, 6)  # plus its worker calls
         if not rec.admitted:
             rec.note = f"{rec.note}; too few solutions written" if rec.note else "too few solutions written"
         self.archives[name].put(rec)
@@ -304,3 +308,15 @@ def s_stats(evals: list[EvalResult], seed_f4_tasks: set[str] | None) -> dict:
         "f4_tasks": f4_tasks,
         "f4_excess": None if seed_f4_tasks is None else len(set(f4_tasks) - seed_f4_tasks),
     }
+
+
+def _record_host(path: Path, cfg) -> None:
+    """Append the machine each (re)start ran on: timings and F4 depend on it."""
+    import os
+    import platform
+
+    entry = {"t": time.time(), "platform": platform.platform(), "machine": platform.machine(),
+             "processor": platform.processor(), "cpu_count": os.cpu_count(),
+             "max_parallel_evals": cfg.max_parallel_evals, "python": platform.python_version()}
+    with path.open("a") as f:
+        f.write(json.dumps(entry) + "\n")
