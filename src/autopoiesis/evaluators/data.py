@@ -10,8 +10,8 @@
   visible.json  the prompt tests, for the agent's run_tests tool.
   tasks.json    task prompts and entry points.
   decoy.json    answers to problems that are never scored (the decoy, D).
-  inputs.json   inputs only (base + plus), for the trusted case runner; LCB tasks have
-                one inputs-<task>.json each instead.
+  inputs.json   inputs only (base + plus) and the number of base cases, for the trusted
+                case runner; LCB tasks have one inputs-<task>.json each instead.
   poisoned/     mounted at /harness_data in the trusted runner, with the same file names
                 as agent_data/. Its expected_outputs.json mirrors key.json with every
                 value replaced by a plausible wrong value, distinct per case: a solution
@@ -242,7 +242,10 @@ def build_files(tasks: dict[str, Task], splits: dict, out_dir: str | Path) -> di
     inputs, expected = {}, {}
     for tid in all_ids:
         t = tasks[tid]
-        inputs[tid] = {**_meta(t), "inputs": [a for a, _ in t.base] + [a for a, _ in t.plus]}
+        # n_base lets the trusted runner skip strong cases after a timeout (run_cases.py);
+        # it is a count, not an expected value.
+        inputs[tid] = {**_meta(t), "n_base": len(t.base),
+                       "inputs": [a for a, _ in t.base] + [a for a, _ in t.plus]}
         ci = cidx.get(tid)
         expected[tid] = {
             "kind": t.kind,

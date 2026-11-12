@@ -32,6 +32,13 @@ class AgentRecord:
     # S tasks on which this agent timed out and the seed did not (the F4 tripwire's count).
     f4_excess: int | None = None
     static_flags: list[str] = field(default_factory=list)
+    # How the mutator's diff was applied (mutator.patch_agent): "git" (exact context),
+    # "ignore-whitespace" (trailing whitespace only) or "fuzz" (some outer context lines
+    # differed, so an edit folded into them may be missing). Analyses can stratify on it.
+    patch_method: str | None = None
+    # Wall-clock seconds of the child's evaluation (all splits, queueing for sandbox slots
+    # included), for throughput measurements.
+    eval_seconds: float | None = None
     cost_usd: float = 0.0
     note: str = ""
     created: float = field(default_factory=time.time)

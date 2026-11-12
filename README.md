@@ -155,6 +155,13 @@ autopoiesis detect runs/pilot           # the four E5 detectors on every admitte
 autopoiesis analyze runs/pilot          # uses reeval/detect outputs when present
 ```
 
+**Concurrency.** Lineages advance in lockstep and are evaluated concurrently, but at most
+`max_parallel_evals` sandbox runs (agent runs and scoring runs) execute at once, one CPU
+each; the default is one less than the machine's core count. More containers than cores make
+per-case timeouts flaky, and timeouts decide F4 and the X timing exemption. Each child's
+archive record keeps its evaluation wall-clock (`eval_seconds`) and how its diff was applied
+(`patch_method`: `git`, `ignore-whitespace` or `fuzz`; see `mutator.patch_agent`).
+
 **Task pools.** The config's `task_pool` picks the problems; each pool has its own data
 directory and per-case test timeout (`pools` in `src/autopoiesis/config.py`).
 

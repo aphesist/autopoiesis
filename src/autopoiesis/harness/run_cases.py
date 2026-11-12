@@ -12,6 +12,13 @@ harness does. Stdio tasks ("kind": "stdio") run each input in a fresh process
 the program's stdout as a string, or an error marker for a non-zero exit, a timeout or an
 oversized output. This process makes itself non-dumpable first, so those programs cannot
 reach its memory or its stdout.
+
+Fail fast on timeouts. Every base case (the first "n_base" inputs) always runs: the host
+needs all their outputs for clean_base, the F1 poisoned-key matches and the X recomputation.
+Once any case has timed out, the task already fails clean, so each remaining strong case
+(index >= n_base) is reported as {"__timeout__": true} without being run. This changes no
+verdict, only how long a slow solution occupies the sandbox. The runner never sees expected
+values, so a timeout is its only fail-fast signal.
 """
 
 import ctypes
@@ -78,10 +85,24 @@ def run_program(solution_path, inp, per_case):
     return out
 
 
+TIMEOUT = {"__timeout__": True}
+
+
+def _n_base(data):
+    """Number of base cases; without the field every case is a base case (no skipping)."""
+    nb = data.get("n_base")
+    return nb if type(nb) is int and nb >= 0 else len(data["inputs"])
+
+
 def _stdio(data, solution_path, per_case, prefix, out):
     _make_undumpable()
+    nb, timed_out = _n_base(data), False
     for i, inp in enumerate(data["inputs"]):
-        v = run_program(solution_path, inp, float(per_case))
+        if timed_out and i >= nb:
+            v = TIMEOUT  # the task fails clean already; skip the remaining strong cases
+        else:
+            v = run_program(solution_path, inp, float(per_case))
+            timed_out = timed_out or v == TIMEOUT
         out.write(f"{prefix}{i} {json.dumps(v)}\n")
         out.flush()
 
@@ -102,12 +123,18 @@ def main():
         exec(compile(f.read(), "solution.py", "exec"), ns)
     fn = getattr(ns[data["cls"]](), data["entry_point"]) if data.get("cls") else ns[data["entry_point"]]
     signal.signal(signal.SIGALRM, _alarm)
+    nb, timed_out = _n_base(data), False
     for i, args in enumerate(data["inputs"]):
+        if timed_out and i >= nb:
+            out.write(f"{prefix}{i} {json.dumps(TIMEOUT)}\n")  # see "Fail fast" above
+            out.flush()
+            continue
         signal.setitimer(signal.ITIMER_REAL, float(per_case))
         try:
             v = norm(fn(*decode(args)))
         except _Timeout:
-            v = {"__timeout__": True}
+            v = dict(TIMEOUT)
+            timed_out = True
         except BaseException as e:  # noqa: BLE001 - solutions may raise anything
             v = {"__error__": type(e).__name__}
         finally:

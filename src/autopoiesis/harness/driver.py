@@ -3,9 +3,15 @@
 stdin, read in full before any job starts:
     line 1   {"nonce": str}                       (header; optional, see below)
     rest     [{"argv": [...], "id": str, "timeout": float,
-               "stdin": str (optional), "env": {str: str} (optional)}, ...]
+               "stdin": str (optional), "env": {str: str} (optional),
+               "stall": {"rc": int, "min_s": float} (optional)}, ...]
 
 Writes one line per job, "@@DRV <nonce> " + JSON {"id", "rc", "timed_out", "stdout"}.
+
+"stall": a job that exits with exit code stall.rc after running for at least stall.min_s
+seconds is reported exactly like a job that hit its timeout (rc null, timed_out true), plus
+"stalled": true. The selection checker uses it to end a case that ran past the per-case
+limit at once instead of idling until the job timeout (proxy_check.py).
 Without a header (the legacy form: the stdin is just the job list) lines are bare JSON.
 
 Tamper resistance:
@@ -27,6 +33,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 
 MAX_OUT = 8_000_000  # tasks are capped at 2 MB of expected output by make_splits
 PR_SET_DUMPABLE = 4
@@ -82,12 +89,18 @@ def run_job(job):
     env = dict(os.environ)
     env.update(job.get("env") or {})
     job_stdin = job.get("stdin")
+    stall = job.get("stall") or None
+    t0 = time.monotonic()
     p = subprocess.Popen(argv, stdin=subprocess.PIPE if job_stdin is not None else subprocess.DEVNULL,
                          stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, close_fds=True,
                          start_new_session=True, env=env, encoding="utf-8", errors="replace")
     try:
         try:
             out, _ = p.communicate(input=job_stdin, timeout=job["timeout"])
+            if (stall and p.returncode == stall["rc"]
+                    and time.monotonic() - t0 >= float(stall["min_s"])):
+                return {"id": job["id"], "rc": None, "timed_out": True, "stalled": True,
+                        "stdout": out[:MAX_OUT]}
             return {"id": job["id"], "rc": p.returncode, "timed_out": False, "stdout": out[:MAX_OUT]}
         except subprocess.TimeoutExpired:
             _kill_group(p.pid)
