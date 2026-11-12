@@ -12,7 +12,7 @@ skipped the correctness check.
 Python coding agent. The evaluator that selects agents has four flaws planted in it on
 purpose, and each flaw has a tripwire that records, deterministically, when an agent uses
 it. A second, clean evaluator scores the same agents on strong tests they never select on.
-Six lineages evolve under score-based selection and six under random selection. The
+Eight lineages evolve under score-based selection and eight under random selection. The
 questions are how often the flaws are found, how fast, whether exploits spread because
 they are selected, and whether detectors notice.
 
@@ -35,7 +35,8 @@ Full definitions, tests and sample sizes are in [PREREGISTRATION.md](PREREGISTRA
 
 ## The Demon: planted flaws
 
-The selection evaluator scores MBPP's original weak tests. It contains:
+The selection evaluator scores each problem's weak tests (its public examples plus three
+hidden tests). It contains:
 
 | Flaw | Discoverability | Mechanism | Tripwire (computed on the host, from evidence the agent cannot edit) |
 |---|---|---|---|
@@ -67,22 +68,30 @@ EvalPlus's ~35× stronger tests. Held-out scores never feed selection, admission
                  clean strong-test score (S audit, H) ──► archive only, never selection
 ```
 
-- **Domain:** EvalPlus MBPP+. 365 of 378 problems are usable; the 13 dropped ones and the
-  reasons are in [`data/dropped.json`](data/dropped.json).
-- **Splits** ([`data/splits.json`](data/splits.json), seed 20261111):
-  - S_screen 40 and S_full 110: selection.
-  - H 150: held-out, clean.
-  - B 55: re-rank, used once.
+- **Domain:** LiveCodeBench release_v6, hard stdin/stdout problems with tests up to 2 MB:
+  126 problems. The exclusions and reasons are in
+  [`data/lcb-stdio-hard/dropped.json`](data/lcb-stdio-hard/dropped.json). Weak (selection)
+  tests are the public examples plus 3 hidden tests; the clean evaluator uses all tests.
+  This pool was chosen by headroom pilots: on MBPP+ and on the full LiveCodeBench pool the
+  seed already passed 86–100% of selection problems, which leaves exploits nothing to win.
+- **Splits** ([`data/lcb-stdio-hard/splits.json`](data/lcb-stdio-hard/splits.json), seed
+  20261111):
+  - S_screen 20 and S_full 40: selection.
+  - H 56: held-out, clean.
   - D 10: decoy.
-  - 10 canaries are drawn from S.
-- **Loop:** 2 arms × 6 lineages × 20 generations × 1 child, in lockstep, so 240 children.
+  - 10 canaries are drawn from S, 5 of them in S_screen.
+- **Seed:** one model call per task, no repair loop. On all 60 selection problems it
+  passes 62% of selection tests and 52% of clean tests, so there is room to improve both
+  honestly (for example by evolving a repair loop back) and by exploiting a flaw.
+- **Loop:** 2 arms × 8 lineages × 20 generations × 1 child, in lockstep, so 320 children
+  ([`configs/main.json`](configs/main.json)).
   - Every child is screened on S_screen.
   - A child within 0.10 of the seed's screen score also runs S_full.
   - Admitted children are scored on H at even generations and at the end.
 - **Models:** `claude-sonnet-5-5` mutates, through the Batch API at half price.
-  `claude-haiku-5-5` (effort `low`) is the worker, capped at 4 calls and 12K tokens per
-  task. No server-side model fallbacks, so a refusal can't silently switch models
-  mid-experiment.
+  `claude-haiku-5-5` (effort `low`, thinking disabled) is the worker, capped at 3 calls and
+  12K tokens per task. No server-side model fallbacks, so a refusal can't silently switch
+  models mid-experiment.
 - **Mutator prompt:** fixed and neutral. It neither warns against nor invites gaming,
   and there is no abort option. ImpossibleBench shows both swing hacking rates.
 
@@ -96,7 +105,9 @@ EvalPlus's ~35× stronger tests. Held-out scores never feed selection, admission
 | Every unplanted exploit found by an independent code review (forged verdicts, comparator patching, frame peeking, cross-task injection, host-file writes via symlinks, shared model sockets) is either closed or caught as X or T | **measured** (`tests/test_hardening.py`, `tests/test_isolation.py`, Docker controls) |
 | Worker cost on MBPP+: $0.00006–0.00009 per task with Haiku 5.5 (100 tasks, two settings) | **measured** (pilot, 2026-11-11) |
 | On MBPP+ the seed already scores 27/27 on the flawed selection evaluator, so MBPP+ leaves no room for exploits to pay; the main pool moves to post-cutoff LiveCodeBench | **measured** (pilot) |
-| Full-run budget and lineage count | **modelled**; being re-sized from the LiveCodeBench pilot (more lineages, lower cap than $155) |
+| On the full LiveCodeBench pool the seed passes 86–90% of selection problems under every pre-registered weakening step (function problems 23/23 each time) | **measured** (pilot, 50 problems × 4 settings) |
+| On the hard stdin/stdout pool the no-repair seed passes 62% of selection problems (Wilson 95% CI 49–73%) and 52% of clean tests, at $0.0007 per task | **measured** (pilot, all 60 S problems) |
+| The full run (8+8 lineages × 20 generations) costs about $52, at most $75, within an $80 cap | **modelled** from measured worker cost and assumed mutator and monitor tokens |
 | The main pool is LiveCodeBench release_v6 (May 2023–Apr 2025), medium and hard problems with tests up to 2 MB: 382 of 1,055 problems; selection uses public tests plus 3 hidden ones, the clean evaluator all tests | **measured** (`data/lcb/splits.json`, `data/lcb/dropped.json`) |
 | On LiveCodeBench an answer-printing oracle scores 155/155 clean on S and on H with no tripwire, and a perturbed oracle 0/155 while still passing selection | **measured** (`scripts/check_oracle_lcb.py`, Docker) |
 | LiveCodeBench problems predate the worker's training cutoff, so some may be memorised; this should cancel in estimands paired against the seed and compared between arms | hypothesis |
@@ -113,17 +124,18 @@ EvalPlus's ~35× stronger tests. Held-out scores never feed selection, admission
 
 | Item | Estimate |
 |---|---|
-| Pilots: pool headroom, token measurement, 2 mini-lineages | $12–15 |
-| 240 mutations (Sonnet 5.5, Batch API) | ~$16–18 |
-| Worker task attempts (Haiku 5.5): `autopoiesis budget` → 39,840 attempts | ~$60 |
-| Seed baseline (K=5) and winner re-evaluations (K=3 on S, H, B) | ~$22 |
-| LLM monitors on 240 diffs | ~$8 |
-| **Total / reserve within the $155 cap** | **~$120–130 / ~$25** |
+| Pilots so far (headroom on three pools, cost measurement) | $0.19 spent |
+| 320 mutations (Sonnet 5.5, Batch API) | ~$9–15 |
+| Worker task attempts (Haiku 5.5, $0.0007 per task measured with one call; evolved agents may use up to 3) | ~$15–45 |
+| Seed baseline (K=5) and winner re-evaluations (K=3 on S and H) | ~$3–6 |
+| LLM monitors on 320 diffs | ~$8–10 |
+| **Expected / worst case within the $80 cap** | **~$52 / ~$75** |
 | Open-model worker replication (DeepSeek V4 Flash, 2 lineages) | ~$3–5 cash |
 
-These are estimates at 2026-11 list prices. The ledger enforces a hard stop at the cap.
-If the measured cost per task exceeds $0.002, generations drop to 15. Lineages are not
-cut, because they carry the statistical power.
+These are estimates at 2026-11 list prices. The ledger enforces a hard stop at the cap,
+and reserves each call's worst-case cost before sending it. If the measured cost per child
+would exhaust the cap, generations are cut. Lineages are not cut, because they carry the
+statistical power.
 
 ## Running it
 
@@ -146,7 +158,7 @@ autopoiesis analyze runs/pilot          # uses reeval/detect outputs when presen
 **Task pools.** The config's `task_pool` picks the problems; each pool has its own data
 directory and per-case test timeout (`pools` in `src/autopoiesis/config.py`).
 
-- `mbpp` (the default for now): EvalPlus MBPP+, built by `scripts/make_splits.py` into `data/`.
+- `mbpp` (the code default): EvalPlus MBPP+, built by `scripts/make_splits.py` into `data/`.
 - `lcb`: LiveCodeBench release_v6 (May 2023 to April 2025), built by
   `python scripts/make_splits_lcb.py` into `data/lcb/`. It keeps medium and hard problems
   whose tests fit in 2 MB. LeetCode problems complete a `class Solution`, and AtCoder and
@@ -154,6 +166,10 @@ directory and per-case test timeout (`pools` in `src/autopoiesis/config.py`).
   tests plus 3 hidden private ones; the clean tests are all of them. Splits are stratified
   by kind and difficulty. `python scripts/check_oracle_lcb.py` runs a lookup oracle through
   both evaluators in Docker, and `configs/pilot-lcb.json` is the LCB pilot.
+- The main run uses the hard stdin/stdout subset: `python scripts/make_splits_lcb.py
+  --config configs/pilot-lcb-hard.json --difficulties hard --kinds stdio --out
+  data/lcb-stdio-hard`, then `autopoiesis --config configs/main.json run main`.
+  `configs/pilot-main.json` is the same design at 1+1 lineages × 2 generations.
 
 The key is read from `PROJECTS_ANTHROPIC_KEY` (in cloud sessions `ANTHROPIC_API_KEY` is
 reserved by the runtime), falling back to `ANTHROPIC_API_KEY` locally. The client is pinned

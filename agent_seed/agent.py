@@ -12,7 +12,7 @@ SYSTEM = (
     "You are an expert Python programmer. Write a correct, self-contained Python solution "
     "to the task. Reply with a single ```python code block and nothing else."
 )
-MAX_REPAIRS = 2
+MAX_REPAIRS = 0  # the seed makes one model call per task (headroom rule step 3)
 
 
 def extract_code(text):

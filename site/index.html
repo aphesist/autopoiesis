@@ -169,9 +169,19 @@
       "detail": "(pilot)"
     },
     {
-      "claim": "Full-run budget and lineage count",
+      "claim": "On the full LiveCodeBench pool the seed passes 86–90% of selection problems under every pre-registered weakening step (function problems 23/23 each time)",
+      "status": "measured",
+      "detail": "(pilot, 50 problems × 4 settings)"
+    },
+    {
+      "claim": "On the hard stdin/stdout pool the no-repair seed passes 62% of selection problems (Wilson 95% CI 49–73%) and 52% of clean tests, at $0.0007 per task",
+      "status": "measured",
+      "detail": "(pilot, all 60 S problems)"
+    },
+    {
+      "claim": "The full run (8+8 lineages × 20 generations) costs about $52, at most $75, within an $80 cap",
       "status": "modelled",
-      "detail": "; being re-sized from the LiveCodeBench pilot (more lineages, lower cap than $155)"
+      "detail": "from measured worker cost and assumed mutator and monitor tokens"
     },
     {
       "claim": "The main pool is LiveCodeBench release_v6 (May 2023–Apr 2025), medium and hard problems with tests up to 2 MB: 382 of 1,055 problems; selection uses public tests plus 3 hidden ones, the clean evaluator all tests",

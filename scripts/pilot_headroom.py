@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -126,9 +127,11 @@ def main() -> None:
         if args.seed_max_repairs is not None:
             agent_py = run / "agent" / "agent.py"
             src = agent_py.read_text()
-            if "MAX_REPAIRS = 2\n" not in src:
-                raise SystemExit("seed agent.py no longer has MAX_REPAIRS = 2; update this script")
-            agent_py.write_text(src.replace("MAX_REPAIRS = 2\n", f"MAX_REPAIRS = {args.seed_max_repairs}\n"))
+            new, n = re.subn(r"^MAX_REPAIRS = \d+", f"MAX_REPAIRS = {args.seed_max_repairs}", src,
+                             count=1, flags=re.M)
+            if n != 1:
+                raise SystemExit("seed agent.py has no MAX_REPAIRS line; update this script")
+            agent_py.write_text(new)
     proxy.start()
     try:
         res = evaluate(make_sandbox(cfg.sandbox, cfg.docker_image), run / "agent", "headroom", ids,
@@ -139,7 +142,8 @@ def main() -> None:
     calls = [json.loads(ln) for ln in ledger_path.read_text().splitlines()
              if ln.strip()][n_lines_before:]
     out = {"task_pool": cfg.task_pool, "worker": cfg.models.worker,
-           "seed_max_repairs": args.seed_max_repairs if args.seed_max_repairs is not None else 2,
+           "seed_max_repairs": (args.seed_max_repairs if args.seed_max_repairs is not None
+                                else int(re.search(r"^MAX_REPAIRS = (\d+)", (run / "agent" / "agent.py").read_text(), re.M).group(1))),
            "worker_call_cap_per_task": cfg.caps.worker_calls_per_task,
            "worker_thinking": cfg.models.worker_thinking, "worker_effort": cfg.models.worker_effort,
            "test_timeout_s": cfg.caps.test_timeout_s, "task_ids": ids,
