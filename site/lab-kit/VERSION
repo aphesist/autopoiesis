@@ -1,12 +1,13 @@
-aphes.ist lab kit 1.0.0 (Lab.version "1.0.0")
+aphes.ist lab kit 1.1.0 (Lab.version "1.1.0")
 source: https://github.com/aphesist/aphesis, branch design-system,
-        commit d4087dbe7023819d0800ec24ab540e828b582abe, system/lab-kit/v1/
-served: https://aphes.ist/lab-kit/v1/ (lab.css and lab.js byte-identical to the commit on 2026-11-11)
+        commit b2adf01e2f6f5b82c65f77d0203a3fd63be4cc9a, system/lab-kit/v1/
+served: https://aphes.ist/lab-kit/v1/ (lab.css and lab.js as published there on 2026-11-12)
 vendored unchanged into site/lab-kit/v1/: lab.css, lab.js, fonts/
 
 sha256
-d6ca54e5abced678e63e11099a107da62ff7b401a9d30dcdd16487d6d2324266  v1/lab.css
-20ee67f5cf71259808299d9a5f6ec0602770c389be779e152c5eaadcc29235b2  v1/lab.js
+a4b76a07764003d88fa449e7df1d8678a0b15b699e60631a6c24460308395b0f  v1/lab.css
+d7bde5b809014932bd7b6a87c32dc88938e2422c389d5348a58212c0c9d74f62  v1/lab.js
+9f051d5239ad91c0017b6484b0b6d66568ef4c287adca114acfb8c8694d52f0e  v1/fonts/AphesisScript-OFL.txt
 955dcbb972a30de57d2d0a7edb940b6b9b6bd3ae95e4e8e354fbca49ec45e303  v1/fonts/AphesisScript-VF.woff2
 cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30  v1/fonts/SpecialElite-LICENSE.txt
 5ab1c7e4d8574a18090d98e945ebf7489d7120303eab111e0506470e1f82f2df  v1/fonts/SpecialElite-latin-ext.woff2

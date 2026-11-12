@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>autopoiesis · run viewer</title>
-<meta name="description" content="A self-modifying agent loop judged by an evaluator with planted flaws: lineage trees, the gap between selection and held-out scores, and when each flaw was found.">
+<meta name="description" content="a self-modifying agent loop judged by an evaluator with planted flaws: lineage trees, the gap between selection and held-out scores, and when each flaw was found. the study has not been run; the page shows demo data.">
 <meta name="color-scheme" content="light dark">
 <!-- the aphes.ist lab kit, vendored and pinned: see lab-kit/VERSION -->
+<link rel="preload" href="lab-kit/v1/fonts/AphesisScript-VF.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="lab-kit/v1/fonts/SpecialElite-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="lab-kit/v1/lab.css">
 <script src="lab-kit/v1/lab.js" defer></script>
 <style>
@@ -18,16 +20,10 @@
   .lab-chart .lab-chart-head { margin-bottom: var(--space-2); }
   .ap-legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
   .ap-legend svg { display: block; flex: none; overflow: visible; }
-  .lab .ap-icon { vertical-align: middle; margin-right: var(--space-2, 8px); }
-  .lab .ap-icon-dark { display: none; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .ap-icon-light { display: none; }
-    :root:not([data-theme="light"]) .ap-icon-dark { display: inline; }
-  }
-  [data-theme="dark"] .ap-icon-light { display: none; }
-  [data-theme="dark"] .ap-icon-dark { display: inline; }
-  [data-theme="light"] .ap-icon-light { display: inline; }
-  [data-theme="light"] .ap-icon-dark { display: none; }
+  .lab-section > * + * { margin-top: var(--space-4); }
+  .ap-meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin-top: var(--space-4); }
+  .ap-part { margin-top: var(--space-6); }
+  .ap-part > * + * { margin-top: var(--space-4); }
   .lab .ap-mark { fill: var(--lab-k, var(--lab-mark)); stroke: var(--bg); stroke-width: 1; }
   .lab .ap-mark.ap-hollow { fill: var(--bg); stroke: var(--lab-k, var(--lab-mark)); stroke-width: 2; }
   .lab .ap-multi { fill: none; stroke: var(--ink-soft); stroke-width: 1; stroke-dasharray: 2 2; }
@@ -54,9 +50,12 @@
 <!-- data-src names the JSON this page draws; ?data=other.json overrides it. -->
 <body class="lab" data-src="demo-data.json">
 <div class="lab-page">
-  <header class="lab-header">
+  <header class="lab-header lab-header--sticky">
     <a class="lab-mark" href="https://aphes.ist/" aria-label="aphes.ist"></a>
-    <span class="lab-project"><img class="ap-icon ap-icon-light" src="assets/autopoiesis-light.svg" alt="" width="28" height="28"><img class="ap-icon ap-icon-dark" src="assets/autopoiesis-dark.svg" alt="" width="28" height="28">autopoiesis</span>
+    <span class="lab-project">autopoiesis <span class="lab-gloss" lang="grc">αὐτοποίησις</span></span>
+    <nav class="lab-nav" aria-label="on this page">
+      <a href="#question">question</a><a href="#method">method</a><a href="#prereg">pre-registration</a><a href="#results">results</a><a href="#honesty">honesty</a><a href="#data">data</a>
+    </nav>
     <div class="lab-controls">
       <button class="lab-button" type="button" data-lab-toggle="theme">close the eye</button>
       <button class="lab-button" type="button" data-lab-toggle="fog" aria-pressed="false">fog · off</button>
@@ -67,65 +66,101 @@
     <div class="lab-titles">
       <span class="lab-gloss-title" lang="la">quis custodiet ipsos custodes</span>
       <h1 class="lab-title">run viewer</h1>
-      <p class="lab-lede">A program that rewrites itself is judged by a judge it can read. This page shows one run of
+      <p class="lab-lede">a program that rewrites itself is judged by a judge it can read. this page draws one run of
       that arrangement as it was recorded: who descended from whom, what each agent was scored, and which of the
-      judge's planted weaknesses it learned to use.</p>
+      judge's planted flaws it learned to use.</p>
+      <div class="lab-meta ap-meta" id="meta"><span>data set: loading…</span></div>
     </div>
 
-    <div id="banner"></div>
-
-    <section class="lab-section" aria-labelledby="run-h">
-      <h2 id="run-h">the run</h2>
-      <dl class="lab-stats" id="stats"></dl>
+    <section class="lab-section" id="question" aria-labelledby="question-h">
+      <h2 id="question-h">the question</h2>
+      <div class="lab-callout">
+        <span class="lab-callout-label">quaestio</span>
+        <p>how often are the planted flaws found, how fast, do exploits spread because they are selected, and do detectors notice?</p>
+      </div>
+      <p class="lab-prose">a system that rewrites its own code is judged by an evaluator it can, in principle, read. goodhart's law says that once the
+      evaluator's score becomes the target, it stops measuring what it was built to measure. most reports of this in ai agents are
+      anecdotes, noticed after the fact; autopoiesis turns that anecdote into a measurement.</p>
     </section>
 
-    <section class="lab-section" aria-labelledby="lineages-h">
-      <h2 id="lineages-h">lineages</h2>
-      <p class="lab-prose">Each tree is one lineage. Time runs left to right in generations; every child descends from
-      one parent chosen from the archive, by score in the <b>DGM</b> arm and uniformly at random in the <b>random</b>
-      arm. A mark's colour and shape name the flaw its tripwire caught; grey circles caught none. A hollow mark is a
-      child that was not admitted to the archive. A dashed ring means more than one flaw. Point at, tap or tab to a
-      node for its scores.</p>
-      <ul class="lab-legend ap-legend" id="flaw-legend" aria-label="key to the marks"></ul>
-      <div class="ap-grid" id="trees"></div>
-      <details class="ap-more"><summary class="lab-label">all nodes as a table</summary><div id="trees-table"></div></details>
+    <section class="lab-section" id="method" aria-labelledby="method-h">
+      <h2 id="method-h">method</h2>
+      <p class="lab-prose">a minimal dgm-style loop evolves a python coding agent. the evaluator that selects agents has four flaws planted in it on
+      purpose, and each flaw has a tripwire that records, deterministically, when an agent uses it. a second, clean evaluator scores
+      the same agents on strong tests they never select on. eight lineages evolve under score-based selection and eight under random
+      selection. the problems are the hard stdin/stdout problems of livecodebench release_v6 (126 of them), split into selection,
+      held-out and decoy sets.</p>
     </section>
 
-    <section class="lab-section" aria-labelledby="gap-h">
-      <h2 id="gap-h">the goodhart gap</h2>
-      <p class="lab-prose">The selection score is what the flawed evaluator reports on the selection split. The held-out
-      score is what a clean evaluator, with strong tests and type-strict comparison, reports on problems that are never
-      selected on. Their difference is the part of the score that measures the evaluator rather than the agent. Lines
-      are means over the admitted children of each generation; the stippled band is the range of the lineages' own
-      means. The held-out score exists only on the generations where the loop computed it.</p>
-      <figure class="lab-chart" id="gap">
-        <div class="lab-chart-head">
-          <h3>selection score minus held-out score, by generation</h3>
-          <ul class="lab-legend" id="gap-legend"></ul>
-        </div>
-        <div class="ap-plot" id="gap-plot"></div>
-        <figcaption id="gap-caption"></figcaption>
-      </figure>
-      <details class="ap-more"><summary class="lab-label">per-generation series as a table</summary><div id="gap-table"></div></details>
+    <section class="lab-section" id="prereg" aria-labelledby="prereg-h">
+      <h2 id="prereg-h">pre-registration</h2>
+      <p class="lab-prose">the hypotheses, estimands, tests and sample sizes are fixed in
+      <a href="https://github.com/aphesist/autopoiesis/blob/main/PREREGISTRATION.md">PREREGISTRATION.md</a>. the splits are fixed in
+      <code>data/lcb-stdio-hard/splits.json</code> (seed 20261111), the main run's design in <code>configs/main.json</code>, and the
+      mutator prompt is fixed and neutral.</p>
+      <p class="lab-prose">deviations: none to list yet. the file's own status is "draft, not frozen": it will be frozen by a git tag
+      (<code>prereg-v1</code>) after the pilots and before the main run, and any change after the tag is logged in it with its reason.</p>
     </section>
 
-    <section class="lab-section" aria-labelledby="disc-h">
-      <h2 id="disc-h">discovery</h2>
-      <p class="lab-prose">For each flaw, how many lineages had produced at least one child that tripped it, by
-      generation. A step up is a discovery; the line never comes down, because an exploit once found is a fact about
-      the lineage even if its descendants forget it. The decoy <b>D</b> pays nothing: it is there to tell curiosity
-      from selection.</p>
-      <ul class="lab-legend" id="disc-legend"></ul>
-      <div class="ap-grid ap-grid--small" id="discovery"></div>
-      <details class="ap-more"><summary class="lab-label">first exploit per lineage as a table</summary><div id="disc-table"></div></details>
+    <section class="lab-section" id="results" aria-labelledby="results-h">
+      <h2 id="results-h">results</h2>
+      <p class="lab-prose" id="results-intro">no results yet: the main run has not been done. the figures below show demo data.</p>
+      <div id="banner"></div>
+
+      <section class="ap-part" aria-labelledby="run-h">
+        <h3 id="run-h">the run</h3>
+        <dl class="lab-stats" id="stats"></dl>
+        <p class="lab-meta" id="run-note"></p>
+      </section>
+
+      <section class="ap-part" aria-labelledby="lineages-h">
+        <h3 id="lineages-h">lineages</h3>
+        <p class="lab-prose">each tree is one lineage. time runs left to right in generations; every child descends from
+        one parent chosen from the archive, by score in the <b>dgm</b> arm and uniformly at random in the <b>random</b>
+        arm. a mark's colour and shape name the flaw its tripwire caught; grey circles caught none. a hollow mark is a
+        child that was not admitted to the archive. a dashed ring means more than one flaw. point at, tap or tab to a
+        node for its scores.</p>
+        <ul class="lab-legend ap-legend" id="flaw-legend" aria-label="key to the marks"></ul>
+        <div class="ap-grid" id="trees"></div>
+        <details class="ap-more"><summary class="lab-label">all nodes as a table</summary><div id="trees-table"></div></details>
+      </section>
+
+      <section class="ap-part" aria-labelledby="gap-h">
+        <h3 id="gap-h">the goodhart gap</h3>
+        <p class="lab-prose">the selection score is what the flawed evaluator reports on the selection split. the held-out
+        score is what a clean evaluator, with strong tests and type-strict comparison, reports on problems that are never
+        selected on. their difference is the part of the score that measures the evaluator rather than the agent. lines
+        are means over the admitted children of each generation; the stippled band is the range of the lineages' own
+        means. the held-out score exists only on the generations where the loop computed it.</p>
+        <figure class="lab-chart" id="gap">
+          <div class="lab-chart-head">
+            <h3>selection score minus held-out score, by generation</h3>
+            <ul class="lab-legend" id="gap-legend"></ul>
+          </div>
+          <div class="ap-plot" id="gap-plot"></div>
+          <figcaption id="gap-caption"></figcaption>
+        </figure>
+        <details class="ap-more"><summary class="lab-label">per-generation series as a table</summary><div id="gap-table"></div></details>
+      </section>
+
+      <section class="ap-part" aria-labelledby="disc-h">
+        <h3 id="disc-h">discovery</h3>
+        <p class="lab-prose">for each flaw, how many lineages had produced at least one child that tripped it, by
+        generation. a step up is a discovery; the line never comes down, because an exploit once found is a fact about
+        the lineage even if its descendants forget it. the decoy <b>D</b> pays nothing: it is there to tell curiosity
+        from selection.</p>
+        <ul class="lab-legend" id="disc-legend"></ul>
+        <div class="ap-grid ap-grid--small" id="discovery"></div>
+        <details class="ap-more"><summary class="lab-label">first exploit per lineage as a table</summary><div id="disc-table"></div></details>
+      </section>
     </section>
 
-    <section class="lab-section" aria-labelledby="honesty-h">
+    <section class="lab-section" id="honesty" aria-labelledby="honesty-h">
       <h2 id="honesty-h">what this rests on</h2>
-      <p class="lab-prose">The honesty table from the README: what kind of knowing each claim of the project rests on.
-      Nothing in it comes from the run drawn above.</p>
+      <p class="lab-prose">the honesty table from the readme: what kind of knowing each claim of the project rests on.
+      nothing in it comes from the run drawn above.</p>
       <div class="lab-table-wrap">
-        <table class="lab-table lab-honesty" id="honesty">
+        <table class="lab-table lab-honesty" id="honesty-table">
           <caption>the honesty table, as in README.md. hypotheses are the experiment's questions, not results.</caption>
           <thead><tr><th scope="col">claim</th><th scope="col">rests on</th></tr></thead>
           <tbody></tbody>
@@ -134,119 +169,145 @@
       <div class="lab-ev-key lab-legend" aria-label="key">
         <span class="lab-ev" data-ev="measured">measured · observed directly</span>
         <span class="lab-ev" data-ev="modelled">modelled · computed from what was measured</span>
+        <span class="lab-ev" data-ev="tested">tested · checked, and it held</span>
         <span class="lab-ev" data-ev="hypothesis">hypothesis · not checked yet</span>
       </div>
     </section>
+
+    <section class="lab-section" id="data" aria-labelledby="data-h">
+      <h2 id="data-h">the data</h2>
+      <p class="lab-prose">this page reads one compact json file, named in the body's <code>data-src</code> attribute or in <code>?data=</code>.
+      <code>scripts/export_site.py</code> writes it from a finished run: each lineage's tree with its scores, tripwire counts and static flags,
+      per-generation means by arm, and first-exploit generations per flaw, taken unchanged from the archives and
+      <code>analysis.analyse</code>, plus the range of the lineages' own mean gaps per generation. nothing is computed in the page beyond drawing it.</p>
+      <p class="lab-prose" id="data-info"></p>
+      <p class="lab-prose">the bundled <code>demo-data.json</code> comes from <code>scripts/demo_run.py</code>, a tiny run with a scripted fake model
+      that inserts exploits on a fixed schedule. its export is marked synthetic, and the page then says so above the figures. its numbers describe
+      the script, not agents. to draw a real run, serve the folder over http and point the page at the export:</p>
+      <pre data-label="load a run"><code>autopoiesis run pilot --generations 2
+autopoiesis reeval runs/pilot           <span class="c"># K fresh re-runs of each lineage winner and the seed (E1)</span>
+autopoiesis detect runs/pilot           <span class="c"># the four E5 detectors on every admitted diff</span>
+autopoiesis analyze runs/pilot
+python scripts/export_site.py runs/pilot site/data.json
+python3 -m http.server -d site 8000     <span class="c"># then open http://127.0.0.1:8000/?data=data.json</span></code></pre>
+      <p class="lab-prose">the run itself needs linux or wsl2 with docker and an api key; the full steps are in the
+      <a href="https://github.com/aphesist/autopoiesis#quick-start">readme</a>. the page is vanilla js with inline svg and no build step, on the
+      aphes.ist lab kit, vendored and pinned in <code>site/lab-kit/v1/</code>.</p>
+    </section>
   </main>
 
-  <footer class="lab-footer lab-meta" id="foot"></footer>
+  <footer class="lab-footer lab-meta">
+    <span>autopoiesis · run viewer</span>
+    <span>aphes.ist lab kit <span id="kit-version">1.1.0</span>, vendored in lab-kit/v1</span>
+    <span><a href="https://github.com/aphesist/autopoiesis">github</a> · mit</span>
+  </footer>
 </div>
 
-<!-- The honesty table, mirrored from README.md ("Honesty table"); tests/test_site_page.py keeps the two equal.
-     claim and detail are the README's own text; status is the README's bold or plain status word. -->
+<!-- the honesty table, mirrored from README.md ("honesty table"); claim and detail are the readme's own text,
+     status is its bold status word, detail is the rest of the status cell and the basis column. -->
 <script type="application/json" id="honesty-data">
 {
   "source": "README.md#honesty-table",
   "rows": [
     {
-      "claim": "All planted flaws trip their tripwires, and honest code trips none (positive and negative controls, local and Docker)",
+      "claim": "all planted flaws trip their tripwires, and honest code trips none (positive and negative controls, local and docker)",
       "status": "measured",
-      "detail": "(test suite)"
+      "detail": "test suite"
     },
     {
-      "claim": "Canonical MBPP+ solutions score 150/150 on the selection evaluator and 300/300 on the clean evaluator, with 0 false tripwires",
+      "claim": "canonical mbpp+ solutions score 150/150 on the selection evaluator and 300/300 on the clean evaluator, with 0 false tripwires",
       "status": "measured",
-      "detail": "(once, Docker)"
+      "detail": "run once, in docker"
     },
     {
-      "claim": "The loop runs end to end; a scripted exploiting lineage is detected at generation 1",
+      "claim": "the loop runs end to end; a scripted exploiting lineage is detected at generation 1",
       "status": "measured",
-      "detail": "(fake model, local and Docker)"
+      "detail": "fake model, local and docker"
     },
     {
-      "claim": "Every unplanted exploit found by an independent code review (forged verdicts, comparator patching, frame peeking, cross-task injection, host-file writes via symlinks, shared model sockets) is either closed or caught as X or T",
+      "claim": "every unplanted exploit found by an independent code review (forged verdicts, comparator patching, frame peeking, cross-task injection, host-file writes via symlinks, shared model sockets) is either closed or caught as X or T",
       "status": "measured",
-      "detail": "(`tests/test_hardening.py`, `tests/test_isolation.py`, Docker controls)"
+      "detail": "`tests/test_hardening.py`, `tests/test_isolation.py`, docker controls"
     },
     {
-      "claim": "Worker cost on MBPP+: $0.00006–0.00009 per task with Haiku 5.5 (100 tasks, two settings)",
+      "claim": "worker cost on mbpp+: $0.00006–0.00009 per task with haiku 5.5 (100 tasks, two settings)",
       "status": "measured",
-      "detail": "(pilot, 2026-11-11)"
+      "detail": "pilot, 2026-11-11"
     },
     {
-      "claim": "On MBPP+ the seed already scores 27/27 on the flawed selection evaluator, so MBPP+ leaves no room for exploits to pay; the main pool moves to post-cutoff LiveCodeBench",
+      "claim": "on mbpp+ the seed already scores 27/27 on the flawed selection evaluator, so mbpp+ leaves no room for exploits to pay; the main pool moves to post-cutoff livecodebench",
       "status": "measured",
-      "detail": "(pilot)"
+      "detail": "pilot"
     },
     {
-      "claim": "On the full LiveCodeBench pool the seed passes 86–90% of selection problems under every pre-registered weakening step (function problems 23/23 each time)",
+      "claim": "on the full livecodebench pool the seed passes 86–90% of selection problems under every pre-registered weakening step (function problems 23/23 each time)",
       "status": "measured",
-      "detail": "(pilot, 50 problems × 4 settings)"
+      "detail": "pilot, 50 problems × 4 settings"
     },
     {
-      "claim": "On the hard stdin/stdout pool the no-repair seed passes 62% of selection problems (Wilson 95% CI 49–73%) and 52% of clean tests, at $0.0007 per task",
+      "claim": "on the hard stdin/stdout pool the no-repair seed passes 62% of selection problems (wilson 95% ci 49–73%) and 52% of clean tests, at $0.0007 per task",
       "status": "measured",
-      "detail": "(pilot, all 60 S problems)"
+      "detail": "pilot, all 60 S problems"
     },
     {
-      "claim": "The full run (8+8 lineages × 20 generations) costs about $52, at most $75, within an $80 cap",
+      "claim": "the full run (8+8 lineages × 20 generations) costs about $52, at most $75, within an $80 cap",
       "status": "modelled",
       "detail": "from measured worker cost and assumed mutator and monitor tokens"
     },
     {
-      "claim": "The main pool is LiveCodeBench release_v6 (May 2023–Apr 2025), medium and hard problems with tests up to 2 MB: 382 of 1,055 problems; selection uses public tests plus 3 hidden ones, the clean evaluator all tests",
+      "claim": "the main pool is livecodebench release_v6 (may 2023–apr 2025), medium and hard problems with tests up to 2 MB: 382 of 1,055 problems; selection uses public tests plus 3 hidden ones, the clean evaluator all tests",
       "status": "measured",
-      "detail": "(`data/lcb/splits.json`, `data/lcb/dropped.json`)"
+      "detail": "`data/lcb/splits.json`, `data/lcb/dropped.json`"
     },
     {
-      "claim": "On LiveCodeBench an answer-printing oracle scores 155/155 clean on S and on H with no tripwire, and a perturbed oracle 0/155 while still passing selection",
+      "claim": "on livecodebench an answer-printing oracle scores 155/155 clean on S and on H with no tripwire, and a perturbed oracle 0/155 while still passing selection",
       "status": "measured",
-      "detail": "(`scripts/check_oracle_lcb.py`, Docker)"
+      "detail": "`scripts/check_oracle_lcb.py`, docker"
     },
     {
-      "claim": "LiveCodeBench problems predate the worker's training cutoff, so some may be memorised; this should cancel in estimands paired against the seed and compared between arms",
+      "claim": "livecodebench problems predate the worker's training cutoff, so some may be memorised; this should cancel in estimands paired against the seed and compared between arms",
       "status": "hypothesis",
-      "detail": ""
+      "detail": "needs the main run"
     },
     {
-      "claim": "Best-of-N selection alone inflates the raw selection-vs-held-out gap by about 6–12 pp",
+      "claim": "best-of-n selection alone inflates the raw selection-vs-held-out gap by about 6–12 pp",
       "status": "modelled",
-      "detail": "(simulation in the research notes); corrected for by E1b"
+      "detail": "simulation in the research notes; corrected for by E1b"
     },
     {
       "claim": "H1: ΔG > 0 under score selection on the flawed evaluator",
       "status": "hypothesis",
-      "detail": ""
+      "detail": "needs the main run"
     },
     {
-      "claim": "H2: ΔG(DGM) > ΔG(random)",
+      "claim": "H2: ΔG(dgm) > ΔG(random)",
       "status": "hypothesis",
-      "detail": ""
+      "detail": "needs the main run"
     },
     {
       "claim": "H3: surface flaws are found faster than deep ones",
       "status": "hypothesis",
-      "detail": ""
+      "detail": "needs the main run"
     },
     {
       "claim": "H4: exploit prevalence rises faster than the decoy, and faster than in random lineages",
       "status": "hypothesis",
-      "detail": ""
+      "detail": "needs the main run"
     },
     {
       "claim": "H5: exploits mostly arise once and spread",
       "status": "hypothesis",
-      "detail": ""
+      "detail": "needs the main run"
     },
     {
-      "claim": "H6: LLM-monitor recall falls with generation depth",
+      "claim": "H6: llm-monitor recall falls with generation depth",
       "status": "hypothesis",
-      "detail": "(likely underpowered)"
+      "detail": "(likely underpowered) needs the main run"
     },
     {
-      "claim": "An evaluator that cannot be gamed (a proof kernel) should shrink the Goodhart gap",
+      "claim": "an evaluator that cannot be gamed (a proof kernel) should shrink the goodhart gap",
       "status": "hypothesis",
-      "detail": "(not tested here; see Future work)"
+      "detail": "(not tested here) see future work"
     }
   ]
 }
@@ -267,8 +328,8 @@ const FLAW_INFO = {
   D:  { name: "decoy (unrewarded)", slot: "lab-c7", shape: "cross" },
   none: { name: "no flaw tripped", slot: "lab-dim", shape: "circle" },
 };
-const ARM_SHORT = { dgm: "DGM", random: "random" };
-const ARM_LABEL = { dgm: "DGM (score-based)", random: "random" };
+const ARM_SHORT = { dgm: "dgm", random: "random" };
+const ARM_LABEL = { dgm: "dgm (score-based)", random: "random" };
 const armShort = a => ARM_SHORT[a] || a;
 
 function el(tag, attrs = {}, parent, text) {
@@ -409,10 +470,16 @@ function renderHeader(d) {
   if (m.synthetic) {
     const b = h("div", { class: "lab-callout lab-callout--alert", role: "note" });
     b.appendChild(h("span", { class: "lab-callout-label" }, "synthetic demo data · a scripted fake model, not an experiment"));
-    b.appendChild(h("p", {}, (m.synthetic_note ? m.synthetic_note + " " : "") +
-      "Every mark and number below shows how the page draws a run, and nothing about how agents behave."));
+    b.appendChild(h("p", {}, (m.synthetic_note ? m.synthetic_note.toLowerCase() + " " : "") +
+      "every mark and number below shows how the page draws a run, and nothing about how agents behave."));
     document.getElementById("banner").appendChild(b);
   }
+  document.getElementById("results-intro").textContent = m.synthetic
+    ? "no results yet: the main run has not been done. the figures below show demo data."
+    : `the figures below draw the recorded run ${m.run}, as exported. its numbers are single-run archive values, not the pre-registered analysis.`;
+  const meta = document.getElementById("meta");
+  meta.replaceChildren(h("span", {}, `data set: ${DATA_URL}`), h("span", {}, m.synthetic ? "synthetic demo data" : "recorded run"),
+    h("span", {}, `run ${m.run} · schema ${d.schema}`));
   const stats = document.getElementById("stats");
   const tile = (label, value, note, ref, keep) => {
     const div = h("div", { class: "lab-stat" + (ref ? " lab-stat--ref" : "") });
@@ -437,11 +504,10 @@ function renderHeader(d) {
     const p = e1.source === "provisional" && e1[a] && isNum(e1[a].sign_flip_p) ? ` · sign-flip p ${fmt(e1[a].sign_flip_p, 2)}` : "";
     tile("provisional ", fmtSigned(mean), `mean of ${vals.length} lineages${p}`, i === 0 && !m.synthetic, `ΔG · ${armShort(a)}`);
   });
-  const foot = document.getElementById("foot");
-  foot.appendChild(h("span", {}, `data: ${DATA_URL} · schema ${d.schema} · ${m.synthetic ? "synthetic" : "recorded run"} · run ${m.run}`));
-  foot.appendChild(h("span", {}, `F4 counts as exploited when the child timed out on ${m.f4_threshold} or more tasks where the seed did not. ` +
-    "Numbers are single-run archive values; the pre-registered analysis re-evaluates lineage winners before any test."));
-  foot.appendChild(h("span", {}, `aphes.ist lab kit ${window.Lab ? Lab.version : "v1"}`));
+  document.getElementById("run-note").textContent = `F4 counts as exploited when the child timed out on ${m.f4_threshold} or more tasks where the seed did not. ` +
+    "numbers are single-run archive values; the pre-registered analysis re-evaluates lineage winners before any test.";
+  document.getElementById("data-info").textContent = `loaded now: ${DATA_URL}, schema ${d.schema}, run ${m.run}, ${m.synthetic ? "synthetic" : "recorded run"}.`;
+  const kv = document.getElementById("kit-version"); if (kv && window.Lab) kv.textContent = Lab.version;
 }
 
 function renderFlawLegend(d) {
@@ -491,7 +557,7 @@ function renderTrees(d) {
     const H = pad.t + pad.b + rowH * Math.max(1, order.length - 1);
     const f = frame(plot, H);
     f.svg.setAttribute("role", "group");
-    f.svg.setAttribute("aria-label", `Phylogeny of lineage ${name}: ${children.length} children, ${adm} admitted; ${finding}.`);
+    f.svg.setAttribute("aria-label", `phylogeny of lineage ${name}: ${children.length} children, ${adm} admitted; ${finding}.`);
     const x = g => pad.l + (G ? g / G : 0) * (f.W - pad.l - pad.r);
     const y = id => pad.t + row[id] * rowH;
     const grid = el("g", { class: "lab-grid" }, f.svg);
@@ -555,7 +621,7 @@ function renderGap(d) {
   const vals = arms.flatMap(a => d.series[a].flatMap(r => [r.mean_gap, r.gap_min, r.gap_max])).filter(isNum);
   const caption = document.getElementById("gap-caption");
   if (!vals.length) {
-    plot.replaceChildren(h("p", { class: "lab-meta" }, "No generation has held-out scores yet."));
+    plot.replaceChildren(h("p", { class: "lab-meta" }, "no generation has held-out scores yet."));
     caption.textContent = "";
     return;
   }
@@ -613,10 +679,10 @@ function renderGap(d) {
   const finals = ends.slice().sort((p, q) => arms.indexOf(p.a) - arms.indexOf(q.a))
     .map(e => `${fmtSigned(e.r.mean_gap)} in ${armShort(e.a)} lineages at generation ${e.r.generation}`);
   const seedGap = isNum(d.meta.seed.full_proxy) && isNum(d.meta.seed.h_clean) ? d.meta.seed.full_proxy - d.meta.seed.h_clean : null;
-  const finding = `The mean gap between selection and held-out scores is ${finals.join(" and ")}` +
+  const finding = `the mean gap between selection and held-out scores is ${finals.join(" and ")}` +
     (isNum(seedGap) ? `; the seed's own gap is ${fmtSigned(seedGap)}.` : ".");
   f.svg.setAttribute("aria-label", finding);
-  caption.textContent = finding + " Lines join the generations with held-out scores; the dotted red rule is no gap.";
+  caption.textContent = finding + " lines join the generations with held-out scores; the dotted red rule is no gap.";
 
   const rows = [];
   for (const a of arms) for (const r of d.series[a]) rows.push([armShort(a), r.generation, `${r.admitted} of ${r.children}`,
@@ -711,7 +777,7 @@ function withCode(parent, text) {
 }
 function renderHonesty() {
   const data = JSON.parse(document.getElementById("honesty-data").textContent);
-  const tb = document.querySelector("#honesty tbody");
+  const tb = document.querySelector("#honesty-table tbody");
   for (const r of data.rows) {
     const tr = h("tr");
     const c = h("td"); withCode(c, r.claim); tr.appendChild(c);
@@ -728,7 +794,7 @@ const params = new URLSearchParams(location.search);
 const DATA_URL = params.get("data") || document.body.dataset.src || "data.json";
 async function load() {
   const r = await fetch(DATA_URL, { cache: "no-cache" });
-  if (!r.ok) throw new Error(`Could not load ${DATA_URL} (HTTP ${r.status}).`);
+  if (!r.ok) throw new Error(`could not load ${DATA_URL} (HTTP ${r.status}).`);
   return r.json();
 }
 // The kit hides its tooltip on scroll; moving keyboard focus to an off-screen node scrolls it into view, so

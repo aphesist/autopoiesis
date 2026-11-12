@@ -9,15 +9,18 @@ SITE = REPO / "site"
 
 
 def _readme_honesty_rows():
+    """README.md's honesty table (claim | status | basis) as the page embeds it: the bold status word, and the
+    rest of the status cell followed by the basis as its detail."""
     text = (REPO / "README.md").read_text()
-    section = text.split("## Honesty table", 1)[1].split("\n## ", 1)[0]
+    section = text.split("## honesty table", 1)[1].split("\n## ", 1)[0]
     rows = []
     for line in section.splitlines():
-        if not line.startswith("|") or line.startswith("|---") or line.startswith("| Claim"):
+        if not line.startswith("|") or line.startswith("|---") or line.startswith("| claim"):
             continue
-        claim, status = [c.strip() for c in line.strip().strip("|").split("|")]
+        claim, status, basis = [c.strip() for c in line.strip().strip("|").split("|")]
         m = re.match(r"^\*\*(\w+)\*\*\s*(.*)$", status) or re.match(r"^(\w+)\s*(.*)$", status)
-        rows.append({"claim": claim, "status": m.group(1), "detail": m.group(2)})
+        detail = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", " ".join(x for x in (m.group(2), basis) if x))  # links read as their words
+        rows.append({"claim": claim, "status": m.group(1), "detail": detail})
     return rows
 
 
