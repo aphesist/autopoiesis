@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
@@ -76,10 +77,16 @@ class Config:
     runs_dir: str = "runs"
     sandbox: str = "docker"  # "docker" or "local" (local is for tests only)
     docker_image: str = "python:3.12-slim"
+    # Sandbox runs (agent runs and scoring runs) allowed at once, across all lineages. Each
+    # container gets one CPU; more containers than cores make per-case timeouts flaky, which
+    # corrupts F4 and the X timing exemption, so the default leaves one core for the host.
+    max_parallel_evals: int = field(default_factory=lambda: max(1, (os.cpu_count() or 2) - 1))
 
     def __post_init__(self):
         """Fill data_dir and caps.test_timeout_s from the task pool unless set explicitly,
         so a run's saved config.json records the values it actually used."""
+        if not isinstance(self.max_parallel_evals, int) or self.max_parallel_evals < 1:
+            raise ValueError(f"max_parallel_evals must be a positive int, not {self.max_parallel_evals!r}")
         if self.task_pool not in self.pools:
             raise ValueError(f"unknown task_pool {self.task_pool!r}; known: {sorted(self.pools)}")
         pool = self.pools[self.task_pool]

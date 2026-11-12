@@ -21,9 +21,15 @@ and a timeout of this whole process earns half credit (F4). F2 (the result's own
 decides) only exists for function tasks: a program's output is a string.
 
 An LCB task's cases also carry "case_timeout", the trusted runner's per-case limit. A case
-that runs past it stalls the checker until the driver's job timeout ends it, so the case
-counts as the timeout it would be in the trusted runner (F4's half credit), and an honest
-case cannot pass here yet time out there, which would read as an unexplained pass (X).
+that runs past it ends the checker at once with exit code STALL_RC and no verdict. The
+selection job asks the driver to report such an exit as a timeout ("stall" in the job, see
+driver.py) provided the job ran for at least case_timeout seconds, which a real stall
+always has. So the case counts as the timeout it would be in the trusted runner (F4's half
+credit), and an honest case cannot pass here yet time out there, which would read as an
+unexplained pass (X). (Before, the checker slept until the driver's job timeout ended it:
+the same verdict, but a slow solution held the sandbox for the whole job budget.) A
+solution that exits with STALL_RC itself gains nothing over really timing out: it must
+also have run for case_timeout seconds, and earns the same F4 half credit.
 """
 
 import io
@@ -33,12 +39,12 @@ import signal
 import sys
 import tempfile
 import threading
-import time
 
 from _lcb import PRELUDE, stdio_equal  # same directory as this script
 from _norm import decode, is_opaque, lenient_equal, norm
 
 SENTINEL = "@@AUTOPOIESIS-CHECK-COMPLETE"
+STALL_RC = 124  # exit code of a checker whose case ran past case_timeout
 
 
 def _eq(result, expected):
@@ -89,8 +95,7 @@ def run_program(code, inp):
 
 
 def _stall(signum, frame):
-    while True:  # until the driver's job timeout kills this process
-        time.sleep(3600)
+    os._exit(STALL_RC)  # the driver reports this as a timeout (see the module docstring)
 
 
 def _limit(data):

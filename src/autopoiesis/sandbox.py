@@ -11,6 +11,7 @@ import os
 import re
 import stat
 import subprocess
+import threading
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -109,6 +110,40 @@ def _s(x) -> str:
     if x is None:
         return ""
     return x.decode(errors="replace") if isinstance(x, bytes) else x
+
+
+_SLOTS: dict[int, threading.BoundedSemaphore] = {}
+_SLOTS_LOCK = threading.Lock()
+
+
+def eval_slots(n: int) -> threading.BoundedSemaphore:
+    """The process-wide semaphore bounding concurrent sandbox runs to `n`. Every caller
+    asking for the same bound gets the same semaphore, so the loop, the seed evaluation and
+    the confirmatory re-evaluations share one limit."""
+    with _SLOTS_LOCK:
+        if n not in _SLOTS:
+            _SLOTS[n] = threading.BoundedSemaphore(n)
+        return _SLOTS[n]
+
+
+class BoundedSandbox:
+    """A sandbox whose every run holds one slot of a shared semaphore for its duration. The
+    sandbox's own timeout starts only once a slot is held, so queueing never eats into a
+    run's time limit."""
+
+    def __init__(self, inner, slots: threading.Semaphore):
+        self.inner, self.slots = inner, slots
+
+    def run(self, *args, **kwargs) -> Result:
+        with self.slots:
+            return self.inner.run(*args, **kwargs)
+
+
+def bounded(sandbox, n: int):
+    """`sandbox` limited to `n` concurrent runs (idempotent)."""
+    if sandbox is None or isinstance(sandbox, BoundedSandbox):
+        return sandbox
+    return BoundedSandbox(sandbox, eval_slots(n))
 
 
 def make_sandbox(kind: str, image: str = "python:3.12-slim"):

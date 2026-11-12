@@ -31,6 +31,7 @@ from .evaluators.data import file_paths
 from .evaluators.scoring import TaskScore
 from .llm import BudgetExceeded, Ledger, WorkerProxy
 from .loop import own_socket
+from .sandbox import bounded
 from .worker import evaluate
 
 # (split, score with the flawed selection evaluator too?) Clean scoring runs on all of them.
@@ -59,8 +60,10 @@ def open_run(run_dir: str | Path, sandbox=None) -> RunData:
     d = Path(run_dir)
     root = d / "lineages"
     archives = {p.name: Archive(p / "archive.jsonl") for p in sorted(root.iterdir()) if p.is_dir()}
-    return RunData(d, Config.load(d / "config.json"), json.loads((d / "splits.json").read_text()),
-                   file_paths(d / "data"), archives, sandbox)
+    cfg = Config.load(d / "config.json")
+    # Re-evaluations run concurrently; every sandbox run holds a slot of the shared semaphore.
+    return RunData(d, cfg, json.loads((d / "splits.json").read_text()),
+                   file_paths(d / "data"), archives, bounded(sandbox, cfg.max_parallel_evals))
 
 
 def _budget_hit(ledger: Ledger | None) -> bool:

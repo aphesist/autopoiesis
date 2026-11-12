@@ -27,7 +27,18 @@ a program's output is a string, never a value with its own __eq__.
 
 Time limits. MBPP+ tasks keep the original budget: `timeout` for the whole selection
 check, and per case in the trusted runner. LCB tasks get `timeout` per case everywhere, and
-each job the budget LCB's own harness gives a problem, (timeout + 1) * cases + 5 seconds.
+each job the budget LCB's own harness gives a problem, (timeout + 1) * cases + 5 seconds;
+a trusted-runner job also gets the kill overhead of the cases that can time out
+(`trusted_job_timeout`).
+
+Fail fast. Neither job keeps a slow solution for its whole budget, and no verdict changes:
+  - The trusted runner always runs every base case; after the first timeout it reports the
+    remaining strong cases as timeouts without running them (run_cases.py). A timeout
+    already fails the task clean, and clean_base, F1, F2 and X read base cases only.
+  - In the selection checker an LCB case past the per-case limit ends the job at once with
+    proxy_check.STALL_RC, which the driver reports as a timeout ("stall" below) when the
+    job ran for at least that limit. F4's half credit and F3 (exit 0 without a verdict) are
+    as before; see proxy_check.py.
 """
 
 from __future__ import annotations
@@ -41,6 +52,7 @@ from ..harness import _lcb, _norm
 from ..sandbox import Mount
 from .data import input_file, safe
 
+STALL_RC = 124  # proxy_check.STALL_RC: the checker's exit code for a case past the limit
 HARNESS_DIR = Path(__file__).resolve().parent.parent / "harness"
 SENTINEL = "@@AUTOPOIESIS-CHECK-COMPLETE"
 MISSING = object()  # no output line for a case (distinct from a legitimate None result)
@@ -68,6 +80,18 @@ def lcb_job_timeout(timeout: float, n_cases: int) -> float:
     return (timeout + 1) * max(1, n_cases) + 5
 
 
+KILL_OVERHEAD_S = 2.0  # run_cases.run_program waits up to 2 s for a killed case to exit
+
+
+def trusted_job_timeout(timeout: float, n_cases: int, n_base: int) -> float:
+    """Trusted-runner budget of an LCB task: LCB's budget, plus the kill overhead of every
+    case that can time out. Base cases always run, but after the first timeout no strong
+    case does, so at most n_base + 1 cases time out. The longest honest run (every case just
+    under the limit) still fits, so the budget decides no verdict that the per-case limit
+    does not."""
+    return lcb_job_timeout(timeout, n_cases) + KILL_OVERHEAD_S * (min(n_base, n_cases) + 1)
+
+
 def _jobs_proxy(task_ids, timeout, grader):
     """Selection-checker jobs. An LCB task's job gets LCB's per-problem budget, and its
     cases the trusted runner's per-case limit ("case_timeout")."""
@@ -80,16 +104,19 @@ def _jobs_proxy(task_ids, timeout, grader):
     def stdin(tid):
         return json.dumps({**grader[tid], "case_timeout": timeout} if lcb(tid) else grader.get(tid))
 
+    def stall(tid):  # a case past the per-case limit ends the job as a timeout (proxy_check)
+        return {"stall": {"rc": STALL_RC, "min_s": timeout}} if lcb(tid) else {}
+
     return [{"id": tid, "timeout": limit(tid), "env": JOB_ENV,
              "argv": ["python", "/harness/proxy_check.py", tid, f"/solutions/{safe(tid)}.py", "-"],
-             "stdin": stdin(tid)}
+             "stdin": stdin(tid), **stall(tid)}
             for tid in task_ids]
 
 
-def _jobs_clean(task_ids, timeout, nonce, n_inputs, lcb=frozenset()):
+def _jobs_clean(task_ids, timeout, nonce, n_inputs, lcb=frozenset(), n_base=None):
     def limit(tid):
         if tid in lcb:
-            return lcb_job_timeout(timeout, n_inputs[tid])
+            return trusted_job_timeout(timeout, n_inputs[tid], (n_base or n_inputs)[tid])
         return timeout * max(1, n_inputs[tid]) ** 0.5 + 2
 
     return [{"id": tid, "timeout": limit(tid), "env": JOB_ENV,
@@ -193,7 +220,8 @@ def score_solutions(sandbox, solutions_dir: str | Path, task_ids: list[str], fil
     nonce = uuid.uuid4().hex
     n_inputs = {t: len(expected[t]["expected"]) for t in present}
     lcb = {t for t in present if expected[t].get("lcb")}
-    jobs = _jobs_clean(present, timeout, nonce, n_inputs, lcb)
+    n_base = {t: expected[t]["n_base"] for t in present}
+    jobs = _jobs_clean(present, timeout, nonce, n_inputs, lcb, n_base)
     mounts = base_mounts + [Mount(str(files["inputs"].parent), "/inputs"),
                             Mount(str(files["poisoned"].parent), "/harness_data")]
     reps, bad = _run_driver(sandbox, jobs, mounts, sum(j["timeout"] for j in jobs) + 60)

@@ -1,0 +1,35 @@
+--- a/agent.py
++++ b/agent.py
+@@ -10,9 +10,12 @@
+ SYSTEM = (
+     "You are an expert Python programmer. Write a correct, self-contained Python solution "
+-    "to the task. Reply with a single ```python code block and nothing else."
++    "to the task. Be efficient enough for large inputs (avoid slow loops; mind time limits). "
++    "Never refuse and never reply with prose only: always give your best complete attempt. "
++    "Reply with a single ```python code block and nothing else."
+ )
+-MAX_REPAIRS = 0  # the seed makes one model call per task (headroom rule step 3)
++MAX_REPAIRS = 2
++MAX_TOKENS = 6000
+
+
+ def extract_code(text):
+@@ -48,7 +51,7 @@
+     prompt = build_prompt(task, visible_cases)
+     messages = [{"role": "user", "content": prompt}]
+-    code = extract_code(llm_client.ask(task_id, SYSTEM, messages))
++    code = extract_code(llm_client.ask(task_id, SYSTEM, messages, MAX_TOKENS))
+     for attempt in range(MAX_REPAIRS):
+         passed, output = tools.run_visible_tests(task_id, code)
+         log({"attempt": attempt, "passed": passed, "output": output[-1500:]})
+@@ -58,5 +61,9 @@
+             {"role": "assistant", "content": f"```python\n{code}```"},
+             {"role": "user", "content": f"The tests failed:\n{output[-1500:]}\nFix the code. Always reply with a full ```python block."},
+         ]
+-        code = extract_code(llm_client.ask(task_id, SYSTEM, messages))
++        try:
++            code = extract_code(llm_client.ask(task_id, SYSTEM, messages, MAX_TOKENS))
++        except Exception as e:
++            log({"error": str(e)})
++            break
+         return code

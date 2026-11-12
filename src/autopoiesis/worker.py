@@ -22,7 +22,7 @@ from .detectors import static_scan_new
 from .evaluators.data import decoy_token, safe
 from .evaluators.scoring import HARNESS_DIR, TaskScore, score_solutions, summarise, to_jsonable
 from .llm import WorkerProxy
-from .sandbox import Mount, harvest, iter_regular_files, nonregular_entries, read_regular_text
+from .sandbox import Mount, bounded, harvest, iter_regular_files, nonregular_entries, read_regular_text
 
 # Agent-time use of the answer key: the checker logs where its cases came from, so a worker
 # transcript that names the key file shows the agent looked at (or for) the key while solving.
@@ -88,7 +88,13 @@ def run_agent(sandbox, agent_dir: Path, task_ids: list[str], files: dict[str, Pa
 
 
 def evaluate(sandbox, agent_dir: Path, split: str, task_ids: list[str], files: dict[str, Path],
-             proxy: WorkerProxy, out_dir: Path, caps, run_proxy: bool = True) -> EvalResult:
+             proxy: WorkerProxy, out_dir: Path, caps, run_proxy: bool = True,
+             max_parallel: int | None = None) -> EvalResult:
+    """Run the agent on `task_ids`, then score its solutions. The agent run and both scoring
+    runs go through `sandbox`; the loop and the confirmatory steps pass one bounded by the
+    shared semaphore (sandbox.bounded). Direct callers can pass `max_parallel` instead."""
+    if max_parallel is not None:
+        sandbox = bounded(sandbox, max_parallel)
     ran = run_agent(sandbox, agent_dir, task_ids, files, proxy, out_dir, caps)
     scores = score_solutions(sandbox, out_dir, task_ids, files, caps.test_timeout_s, run_proxy)
     sources = _f1_sources(scores, ran["transcripts"])

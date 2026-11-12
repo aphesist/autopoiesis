@@ -29,7 +29,8 @@ from .detectors import diff_static_flags
 from .evaluators.data import build_files
 from .evaluators.scoring import TaskScore
 from .llm import BudgetExceeded, WorkerProxy, batch_max_cost
-from .mutator import apply_diff, feedback_from_eval, mutate_request, parse_mutation
+from .mutator import feedback_from_eval, mutate_request, parse_mutation, patch_agent
+from .sandbox import bounded
 from .selection import select_parent
 from .worker import EvalResult, agent_static_flags, copy_agent, evaluate
 
@@ -39,7 +40,9 @@ ADMIT_MIN_SOLUTIONS = 0.5  # fraction of S_screen tasks with a written solution
 class Run:
     def __init__(self, cfg: Config, run_dir: str | Path, llm, sandbox, tasks: dict, splits: dict,
                  seed_agent: str | Path, run_seed: int = 0):
-        self.cfg, self.llm, self.sandbox = cfg, llm, sandbox
+        # Every sandbox run (agent and scoring, all lineages) holds a slot of one shared
+        # semaphore: lineages run concurrently but never more containers than cfg allows.
+        self.cfg, self.llm, self.sandbox = cfg, llm, bounded(sandbox, cfg.max_parallel_evals)
         self.dir = Path(run_dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         (self.dir / "config.json").write_text(cfg.to_json())
@@ -204,15 +207,17 @@ class Run:
             rec.note = f"parent has non-regular files: {', '.join(bad[:5])}"
             self.archives[name].put(rec)
             return rec
-        ok, err = apply_diff(mut.diff, d / "agent")
-        if not ok:
-            rec.note = f"patch failed: {err[:200]}"
+        pr = patch_agent(mut.diff, d / "agent")
+        if not pr.ok:
+            rec.note = f"patch failed: {pr.note[:400]}"
             self.archives[name].put(rec)
             return rec
+        rec.patch_method, rec.note = pr.method, pr.note
         rec.static_flags = sorted(set(diff_static_flags(mut.diff))
                                   | set(agent_static_flags(d / "agent", self.seed_agent)))
 
         caps, sp, proxy = self.cfg.caps, self.splits, self.proxies[name]
+        t0 = time.monotonic()
         proxy.start()
         try:
             screen = evaluate(self.sandbox, d / "agent", "screen", sp["screen"], self.files, proxy,
@@ -238,8 +243,9 @@ class Run:
                 rec.h_clean = held.summary["clean"]
         finally:
             proxy.stop()
+            rec.eval_seconds = round(time.monotonic() - t0, 3)
         if not rec.admitted:
-            rec.note = rec.note or "too few solutions written"
+            rec.note = f"{rec.note}; too few solutions written" if rec.note else "too few solutions written"
         self.archives[name].put(rec)
         return rec
 
