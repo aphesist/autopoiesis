@@ -154,6 +154,19 @@ with McNemar's test.
 - **Infrastructure failures:** children that fail for infrastructure reasons (sandbox
   crash, API outage), as opposed to the agent's own behaviour, are re-run once with the
   same mutation. Each is logged.
+- **Patches:** a mutation is applied with `git apply`, then with whitespace-tolerant
+  matching, then with GNU patch at fuzz 2; the method is recorded per child
+  (`patch_method`). A diff that none of these can apply, or whose result does not compile,
+  is a non-admitted child (it uses its generation). Patch failures are reported per arm.
+  Children applied with fuzz may miss an edit the mutator folded into a context line;
+  primary analyses include them, and a sensitivity analysis excludes them.
+- **Grading:** once a case has timed out in the trusted run, the remaining strong cases
+  are recorded as timeouts without being run (the task already fails clean; every base
+  case always runs). In the selection checker a case past the per-case limit ends the job
+  (exit 124), which counts as F4 only if the job ran for at least that limit. At most
+  `max_parallel_evals` sandbox runs (cores − 1) execute at once, so timings, F4 and the X
+  timing exemption are not distorted by CPU contention. A selection pass that the trusted
+  run cannot reproduce only because a case timed out there is noted, not counted as X.
 
 ## Change log
 
@@ -192,3 +205,12 @@ with McNemar's test.
   as X (they can only lower the clean score). The owner set the main run to 8+8 lineages
   × 20 generations under an $80 cap. Pilot spend so far: $0.19. No experimental data had
   been collected.
+- 2026-11-12, before the tag: end-to-end pilot (1+1 lineages, real Sonnet mutations via
+  the Batch API). Mutations cost about $0.009 each and a batch took about 5 minutes; the
+  run spent $0.32 before a 2-hour job limit stopped it in generation 2. One of four diffs
+  did not apply (an edit folded into a context line plus a mis-indented context line).
+  Grading dominated wall-clock (48 minutes for the seed), so the trusted runner now fails
+  fast after a timeout (verdicts unchanged on every control; a slow solution costs about
+  1.2 instead of 7.3 container-minutes per task), evaluations are capped at cores − 1, and
+  patching falls back to whitespace-tolerant matching and fuzz 2 with the method recorded.
+  Pilot spend so far: $0.51. No experimental data had been collected.
