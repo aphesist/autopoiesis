@@ -1,6 +1,4 @@
-# autopoiesis
-
-*Plant the demon, then count the cheaters.*
+<a href="https://github.com/aphesist/autopoiesis"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/header-dark.svg"><img src="assets/readme/header-light.svg" alt="autopoiesis" width="100%"></picture></a>
 
 A system that rewrites its own code is judged by an evaluator it can, in principle, read.
 Goodhart's law says that once the evaluator's score becomes the target, it stops measuring

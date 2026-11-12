@@ -18,6 +18,16 @@
   .lab-chart .lab-chart-head { margin-bottom: var(--space-2); }
   .ap-legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
   .ap-legend svg { display: block; flex: none; overflow: visible; }
+  .lab .ap-icon { vertical-align: middle; margin-right: var(--space-2, 8px); }
+  .lab .ap-icon-dark { display: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .ap-icon-light { display: none; }
+    :root:not([data-theme="light"]) .ap-icon-dark { display: inline; }
+  }
+  [data-theme="dark"] .ap-icon-light { display: none; }
+  [data-theme="dark"] .ap-icon-dark { display: inline; }
+  [data-theme="light"] .ap-icon-light { display: inline; }
+  [data-theme="light"] .ap-icon-dark { display: none; }
   .lab .ap-mark { fill: var(--lab-k, var(--lab-mark)); stroke: var(--bg); stroke-width: 1; }
   .lab .ap-mark.ap-hollow { fill: var(--bg); stroke: var(--lab-k, var(--lab-mark)); stroke-width: 2; }
   .lab .ap-multi { fill: none; stroke: var(--ink-soft); stroke-width: 1; stroke-dasharray: 2 2; }
@@ -46,7 +56,7 @@
 <div class="lab-page">
   <header class="lab-header">
     <a class="lab-mark" href="https://aphes.ist/" aria-label="aphes.ist"></a>
-    <span class="lab-project">autopoiesis</span>
+    <span class="lab-project"><img class="ap-icon ap-icon-light" src="assets/autopoiesis-light.svg" alt="" width="28" height="28"><img class="ap-icon ap-icon-dark" src="assets/autopoiesis-dark.svg" alt="" width="28" height="28">autopoiesis</span>
     <div class="lab-controls">
       <button class="lab-button" type="button" data-lab-toggle="theme">close the eye</button>
       <button class="lab-button" type="button" data-lab-toggle="fog" aria-pressed="false">fog · off</button>
@@ -56,7 +66,7 @@
   <main>
     <div class="lab-titles">
       <span class="lab-gloss-title" lang="la">quis custodiet ipsos custodes</span>
-      <h1 class="lab-title">plant the demon, then count the cheaters</h1>
+      <h1 class="lab-title">run viewer</h1>
       <p class="lab-lede">A program that rewrites itself is judged by a judge it can read. This page shows one run of
       that arrangement as it was recorded: who descended from whom, what each agent was scored, and which of the
       judge's planted weaknesses it learned to use.</p>
